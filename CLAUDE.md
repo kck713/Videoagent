@@ -54,6 +54,7 @@ scripts/setup.bat, run.bat        Windows 원클릭 설치/실행 (원본/, B롤
 - **결과 검증:** `/verify-draft <프로젝트이름>` — 캡컷이 연 뒤 다시 저장한 파일과 비교
 - **테스트:** `python tests/test_build.py` (빌더를 고치면 반드시 실행)
 - **환경 점검:** `python capcut_agent/agent.py check` (패키지·ffmpeg·캡컷 폴더/버전·API 키 연결)
+- **Claude Code 시작:** `scripts/claude_code.bat`(루트 `Claude_Code_시작.bat`) — 없으면 공식 설치 프로그램으로 설치 후 이 폴더에서 실행. 사용자는 Pro 계정으로 로그인해서 쓴다(권장 방식)
 - **무료 모드:** `scripts/run_free.bat` — analyze → `plan --prompt-only`(단어 타임스탬프 생략한 짧은 프롬프트) → `agent.py clip`으로 클립보드 복사 → 사용자가 claude.ai에서 받은 답을 메모장으로 붙여넣기 → `agent.py import-plan`(JSON 추출·validate·정리, 실패 시 `edit_plan_fix.txt`) → build
 - **API 모드:** `scripts/set_api_key.bat`(키를 PC 환경변수에 저장) → `scripts/run.bat`. 모델은 `CAPCUT_AGENT_MODEL`(기본 claude-opus-5-5)
 - **미리보기:** `python capcut_agent/preview.py <드래프트폴더> --out preview.jpg` → 이미지를 직접 보고 구도·자막 위치를 확인한 뒤 사용자에게 넘긴다

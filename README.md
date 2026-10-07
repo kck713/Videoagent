@@ -6,15 +6,30 @@
 - 대상: Windows + CapCut 9.4.0 (드래프트 = 평문 JSON)
 - 방식: 실제 캡컷 프로젝트에서 뽑은 템플릿을 복제해 드래프트 생성 → 캡컷 프로젝트 목록에 자동 등록
 
-## 사용 방식 3가지
+## 사용 방식
 
 | 방식 | 비용 | 실행 |
 |---|---|---|
-| **무료 모드** | 무료 (claude.ai 무료 계정) | `실행_무료.bat` — 편집 계획만 claude.ai 대화창에 복사·붙여넣기 |
-| **Claude Code** | Pro/Max 구독에 포함 | 이 폴더에서 Claude Code → `/edit 원본 <이름> <스타일>` |
-| **Claude API** | 사용한 만큼 (영상 1편 약 $0.1~0.3) | `API키_설정.bat` 후 `실행.bat` — 완전 자동 |
+| **Claude Code + Pro 계정 (권장)** | Pro/Max 구독에 포함 | `Claude_Code_시작.bat` → `/edit 원본 <이름> <스타일>` |
+| Claude API | 사용한 만큼 (영상 1편 약 $0.1~0.3) | `API키_설정.bat` 후 `실행.bat` — 완전 자동 |
+| 무료 모드 | 무료 (claude.ai 무료 계정) | `실행_무료.bat` — 편집 계획만 claude.ai 대화창에 복사·붙여넣기 |
 
-받아쓰기·얼굴 검출·캡컷 프로젝트 생성·미리보기는 세 방식 모두 PC에서 무료로 돌아갑니다. 편집 계획(어디를 자르고 자막을 어떻게 쓸지)만 Claude가 합니다.
+받아쓰기·얼굴 검출·캡컷 프로젝트 생성·미리보기는 모든 방식에서 PC가 무료로 처리합니다. 편집 계획(어디를 자르고 자막을 어떻게 쓸지)만 Claude가 합니다.
+
+## Claude Code + Pro 계정으로 쓰기 (권장)
+
+1. `설치.bat` 실행 (Python 패키지·ffmpeg 설치, `/edit` 명령 등록)
+2. **`Claude_Code_시작.bat`** 실행 → Claude Code가 없으면 자동 설치 후 이 폴더에서 시작합니다.
+   처음이면 브라우저가 열리니 **Claude Pro 계정으로 로그인**하세요.
+3. 캡컷을 끄고 Claude Code에 입력:
+   - `/edit 원본 1010_인터뷰 talk_short` — 토크형 숏폼
+   - `/edit 원본 1010_인터뷰 target 60초로, 계기 위주` — 인터뷰형, 요청 추가
+4. Claude가 받아쓰기 → 편집 계획(talk_short는 제목 후보를 물어봄) → 컷 검증 → 캡컷 프로젝트 생성 → 미리보기 확인까지 진행합니다.
+
+- Pro 구독 사용량 한도 안에서 추가 비용 없이 쓸 수 있습니다. 한도에 걸리면 잠시 후 다시 하세요.
+- 이 PC에 `ANTHROPIC_API_KEY`가 설정돼 있으면 Claude Code가 그 키를 쓸지 묻습니다. **No**를 골라야 API 요금이 아니라 Pro 구독으로 처리됩니다.
+- 터미널 대신 화면으로 쓰고 싶으면 Claude 데스크톱 앱의 **Code** 탭에서 이 폴더를 열어도 같습니다.
+- Git for Windows를 설치해 두면 Claude Code가 더 안정적으로 명령을 실행합니다(선택).
 
 ## 무료 모드 (claude.ai 무료 계정)
 
@@ -51,7 +66,7 @@
 3. 폴더 안의 **`설치.bat`** 더블클릭 → ffmpeg와 필요한 패키지 설치, Claude Code 명령(`claude_commands` → `.claude\commands`) 등록
 4. `원본` 폴더에 인터뷰 영상, (선택) `B롤`, `BGM` 폴더에 파일 넣기
 5. **캡컷을 끄고** 사용
-   - **Claude Code가 있으면(권장):** 이 폴더에서 Claude Code를 열고 `/edit 원본 <프로젝트이름> talk_short`처럼 입력. API 키 없이 Claude가 직접 편집 계획을 짭니다.
+   - **Claude Code + Pro 계정(권장):** `Claude_Code_시작.bat` → `/edit 원본 <프로젝트이름> talk_short` (위 "Claude Code + Pro 계정으로 쓰기" 참고)
    - **무료:** `실행_무료.bat` (위 "무료 모드" 참고)
    - **Claude API:** `API키_설정.bat`으로 키를 한 번 등록한 뒤 `실행.bat` 더블클릭 (위 "Claude API로 쓰기" 참고)
 6. 캡컷을 열면 목록 맨 앞에 새 프로젝트가 있습니다.

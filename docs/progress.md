@@ -57,6 +57,11 @@
 - `agent.py clip`(UTF-16으로 한글 안전 복사), `agent.py import-plan`(코드블록/설명 섞인 답변에서 JSON 추출, 검사, 고칠 문구 생성)
 - 무료 모드 프롬프트는 단어 타임스탬프 생략(4분 원본 기준 약 5천 자)
 
+## 2026-10-07 — Pro 계정 + Claude Code를 기본 방식으로
+
+- 사용자 결정: 다른 PC에서도 본인 Pro 계정으로 Claude Code를 써서 사용(API·무료 모드는 보조)
+- `scripts/claude_code.bat`(Claude_Code_시작.bat): Claude Code 자동 설치(공식 install.cmd) 후 폴더에서 실행, API 키가 있으면 No 선택 안내
+
 ## 다음 할 일
 
 - [x] `1007_auto_원본편집` 캡컷 검증
