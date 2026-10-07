@@ -1,0 +1,214 @@
+{
+ "_설명": "토크·팟캐스트형 빠른 숏폼(샘플 2). 상단 고정 제목 2줄, 주황 테두리, 낮은 자막(73%), 괄호 맥락 자막(노랑), 큰 빨강 강조, 화자 이름표, 하단 면책 문구, 원형 강조. 측정은 docs/target-style.md 참고",
+ "layout": {
+  "mode": "fill",
+  "face_target": [
+   0.5,
+   0.42
+  ],
+  "zoom_pattern": [
+   1.0,
+   1.25
+  ],
+  "closeup_face_target": [
+   0.5,
+   0.4
+  ]
+ },
+ "roles": {
+  "normal": {
+   "color": "#FFFFFF",
+   "size": 5.2,
+   "y": -0.469,
+   "language": "ko-KR",
+   "shadow": true,
+   "shadow_color": "#000000",
+   "shadow_alpha": 0.85,
+   "shadow_smoothing": 0.4,
+   "shadow_distance": 2.5
+  },
+  "quote": {
+   "color": "#FAD067",
+   "size": 5.2,
+   "y": -0.469,
+   "language": "ko-KR",
+   "shadow": true,
+   "shadow_color": "#000000",
+   "shadow_alpha": 0.85,
+   "shadow_smoothing": 0.4,
+   "shadow_distance": 2.5
+  },
+  "emphasis": {
+   "color": "#FAD067",
+   "size": 6.7,
+   "bold": true,
+   "y": -0.469,
+   "language": "ko-KR",
+   "shadow": true,
+   "shadow_color": "#000000",
+   "shadow_alpha": 0.85,
+   "shadow_smoothing": 0.4,
+   "shadow_distance": 2.5
+  },
+  "alert": {
+   "color": "#F0465A",
+   "size": 7.9,
+   "bold": true,
+   "y": -0.4,
+   "language": "ko-KR",
+   "shadow": true,
+   "shadow_color": "#000000",
+   "shadow_alpha": 0.9,
+   "shadow_smoothing": 0.4,
+   "shadow_distance": 2.5
+  },
+  "aside": {
+   "color": "#FAD067",
+   "size": 4.3,
+   "y": -0.469,
+   "language": "ko-KR",
+   "wrap": [
+    "(",
+    ")"
+   ],
+   "shadow": true,
+   "shadow_color": "#000000",
+   "shadow_alpha": 0.85,
+   "shadow_smoothing": 0.4,
+   "shadow_distance": 2.5
+  }
+ },
+ "highlight_color": "#FAD067",
+ "en": null,
+ "label": {
+  "color": "#FAD067",
+  "size": 3.7,
+  "y": -0.405,
+  "language": "ko-KR",
+  "wrap": [
+   "(",
+   ")"
+  ],
+  "shadow": true,
+  "shadow_color": "#000000",
+  "shadow_alpha": 0.85,
+  "shadow_smoothing": 0.4,
+  "shadow_distance": 2.5
+ },
+ "top_label": {
+  "color": "#FFFFFF",
+  "size": 2.7,
+  "y": 0.89,
+  "bg_color": "#000000",
+  "bg_alpha": 0.85,
+  "language": "ko-KR"
+ },
+ "ending": {
+  "color": "#FFFFFF",
+  "size": 4.9,
+  "y": -0.06,
+  "bg_color": "#000000",
+  "bg_alpha": 0.9,
+  "line_max_width": 0.7,
+  "language": "ko-KR"
+ },
+ "pip_caption": {
+  "color": "#FFFFFF",
+  "size": 4.3,
+  "y": -0.12,
+  "bold": true,
+  "language": "ko-KR",
+  "shadow": true,
+  "shadow_color": "#000000",
+  "shadow_alpha": 0.75,
+  "shadow_smoothing": 0.5,
+  "shadow_distance": 2.5
+ },
+ "ai_image_label": "AI로 생성한 이미지 입니다.",
+ "title": {
+  "line1": {
+   "color": "#FFF6E0",
+   "size": 7.0,
+   "bold": true,
+   "y": 0.7,
+   "language": "ko-KR",
+   "shadow": true,
+   "shadow_color": "#000000",
+   "shadow_alpha": 0.9,
+   "shadow_smoothing": 0.4,
+   "shadow_distance": 2.5
+  },
+  "line2": {
+   "color": "#FC742E",
+   "size": 8.2,
+   "bold": true,
+   "y": 0.565,
+   "language": "ko-KR",
+   "shadow": true,
+   "shadow_color": "#000000",
+   "shadow_alpha": 0.9,
+   "shadow_smoothing": 0.4,
+   "shadow_distance": 2.5
+  }
+ },
+ "frame": {
+  "inset": 0.028,
+  "width": 6,
+  "radius": 0.035,
+  "colors": [
+   "#FFA237",
+   "#F5C760"
+  ]
+ },
+ "name_tag": {
+  "title": {
+   "color": "#FFE9B0",
+   "size": 2.6,
+   "x": -0.6,
+   "y": -0.13,
+   "language": "ko-KR",
+   "shadow": true,
+   "shadow_color": "#000000",
+   "shadow_alpha": 0.85,
+   "shadow_smoothing": 0.4,
+   "shadow_distance": 2.5
+  },
+  "name": {
+   "color": "#FFFFFF",
+   "size": 3.7,
+   "bold": true,
+   "x": -0.6,
+   "y": -0.185,
+   "bg_color": "#000000",
+   "bg_alpha": 0.75,
+   "language": "ko-KR"
+  },
+  "dur": 2.5
+ },
+ "disclaimer": {
+  "color": "#FFFFFF",
+  "size": 2.0,
+  "y": -0.87,
+  "line_max_width": 0.9,
+  "language": "ko-KR",
+  "shadow": true,
+  "shadow_color": "#000000",
+  "shadow_alpha": 0.9,
+  "shadow_smoothing": 0.4,
+  "shadow_distance": 2.5
+ },
+ "callout": {
+  "ring_color": "#FFD43B",
+  "ring_scale": 0.35
+ },
+ "bgm": {
+  "volume": 0.03,
+  "fade_out": 2.0
+ },
+ "planner_hints": "[talk_short 스타일] 25~45초. 템포가 매우 빠름: 한 컷 1~2.5초, 문장 사이 숨(0.15초 이상)도 잘라 붙인다. 반응·리액션(웃음, 감탄)은 짧게 살린다. 상단 고정 제목(title) 2줄을 반드시 제안: line1 = 대상/상황(10~14자, 예: '턱 보톡스 자주 맞는 사람'), line2 = 반전·결과 후킹(6~10자, 예: '최악의 결말...!'). 과장·허위 없이 영상 내용 안에서 뽑는다. 괄호 맥락 자막(label)은 짧게(2~6자, 예: '한 달만에', '그건 인정'). 강조(emphasis)·경고(alert)를 적극적으로(5~8개). 화자가 처음 나오면 speaker를 지정해 이름표를 띄운다. 의료·시술 정보면 disclaimer를 넣는다. 스티커·이모지가 어울리는 지점은 sticker_notes에 적는다(자동 삽입 안 됨).",
+ "tighten": {
+  "max_pause": 0.25,
+  "max_cut": 2.5
+ },
+ "_크기_보정": "2026-10-07: 캡컷 실측 기준으로 전체 글자 크기 ×0.61 (사용자가 본 자막 9→5.5로 조정)"
+}

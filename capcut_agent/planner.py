@@ -25,6 +25,11 @@ SYSTEM = """당신은 한국어 인터뷰 숏폼(9:16, 약 60~90초) 전문 영�
 9. B롤(broll): 제공된 B롤 중 발언과 맞는 것만. 2~5초, 첫 3초·마지막 3초 금지. 이미지는 fit "fill"(전체) 또는 "pip"(제품 사진 등, pip {scale, x, y}, caption 가능). AI로 만든 이미지는 "ai": true(상단 고지 라벨 자동).
 10. B롤이 부족하면 broll_ideas에 재연 장면 아이디어(at, dur, 장면 설명=이미지 생성 프롬프트)를 적습니다.
 11. 영어(en)는 요청이 있을 때만 넣습니다. 넣을 때는 직역 금지, 관용구는 의미로.
+12. 스타일에 상단 고정 제목이 있으면 title {line1, line2}를 제안합니다(아래 스타일 지침 참고). 영상 내용 안에서만, 과장·허위 금지.
+13. 화자가 여럿이거나 소개가 필요하면 speakers {"A": {"name", "title"}}를 만들고 컷마다 "speaker": "A". 이름을 모르면 "○○○".
+14. 특정 부위·물건을 짚는 말("이 근육", "여기")에는 극단 확대 컷(zoom 2.0~2.5, focus {x,y} 원본 좌표 0~1)과 callouts [{at, dur, x, y}](화면 좌표 0~1)를 쓸 수 있습니다.
+15. 멀티캠(sync가 있는 경우): 컷마다 "angle": "<다른 카메라 src>"로 화면만 바꿀 수 있습니다. in/out과 자막은 항상 기준 카메라(src) 시간입니다. 와이드(여럿)↔클로즈업을 교차합니다.
+16. 의료·시술·금융 정보는 disclaimer(하단 면책 문구)를 넣습니다. 스티커·이모지가 어울리는 지점은 sticker_notes [{at, text}].
 
 출력 형식(JSON만, 설명 금지):
 {
@@ -33,11 +38,34 @@ SYSTEM = """당신은 한국어 인터뷰 숏폼(9:16, 약 60~90초) 전문 영�
  "broll": [ {"src": "<B롤 경로>", "at": 타임라인초, "dur": 초, "in": 0, "fit": "fill"} ],
  "broll_ideas": [ {"at": 타임라인초, "dur": 3, "prompt": "..."} ],
  "ending": {"text": "...", "dur": 2.5},
+ "title": {"line1": "...", "line2": "..."},
+ "speakers": {"A": {"name": "...", "title": "..."}},
+ "callouts": [], "disclaimer": null, "sticker_notes": [],
  "notes": "편집 의도와 확인이 필요한 단어"
 }
+- 스타일에 없는 항목(title, ending 등)은 생략해도 됩니다.
 - lines는 그 컷에서 말하는 내용을 순서대로 자막 줄로 나눈 것입니다. 시간은 적지 않습니다(음성에 맞춰 자동 배분됨).
 - 한 컷 안의 말은 lines에 빠짐없이, 말한 순서대로 넣습니다. 컷 밖의 말은 넣지 않습니다.
 - label, highlight, zoom은 필요할 때만 넣습니다."""
+
+
+def style_hints(style_name=None):
+    try:
+        from agent import load_style
+        st = load_style(style_name)
+        return st.get("planner_hints", ""), st
+    except Exception:
+        return "", {}
+
+
+def system_prompt(style_name=None):
+    hints, st = style_hints(style_name)
+    extra = f"\n\n스타일 지침\n{hints}" if hints else ""
+    if not st.get("title"):
+        extra += "\n- 이 스타일은 상단 고정 제목을 쓰지 않습니다(title 생략)."
+    if not st.get("ending"):
+        extra += "\n- 이 스타일은 엔딩 카드를 쓰지 않습니다(ending 생략)."
+    return SYSTEM + extra
 
 
 def make_user_prompt(analysis, brief="", target_seconds=None):
@@ -53,6 +81,10 @@ def make_user_prompt(analysis, brief="", target_seconds=None):
         for s in c["transcript"]:
             words = " ".join(f"{w[2]}@{w[0]}" for w in s["words"]) if s.get("words") else ""
             lines.append(f"  {s['start']:.2f}-{s['end']:.2f}: {s['text']}" + (f"\n    words: {words}" if words else ""))
+    if analysis.get("sync"):
+        lines.append("\n[멀티캠 동기화] 기준 대비 오프셋(초): " + json.dumps(analysis["sync"], ensure_ascii=False))
+    if analysis.get("faces"):
+        lines.append("[얼굴 위치] " + ", ".join(f"{k}: x={v['x']} y={v['y']}" for k, v in analysis["faces"].items()))
     if analysis.get("broll"):
         lines.append("\n[B롤 목록]")
         for b in analysis["broll"]:
@@ -67,7 +99,7 @@ def extract_json(text):
     return json.loads(m.group(0))
 
 
-def plan(analysis_path, out_path, brief="", target_seconds=None, model=None):
+def plan(analysis_path, out_path, brief="", target_seconds=None, model=None, style=None):
     import anthropic
     with open(analysis_path, encoding="utf-8") as f:
         analysis = json.load(f)
@@ -75,11 +107,16 @@ def plan(analysis_path, out_path, brief="", target_seconds=None, model=None):
     model = model or os.environ.get("CAPCUT_AGENT_MODEL", "claude-opus-5-5")
     print(f"편집 계획 생성 중 ({model})...")
     msg = client.messages.create(
-        model=model, max_tokens=16000, system=SYSTEM,
+        model=model, max_tokens=16000, system=system_prompt(style),
         messages=[{"role": "user", "content": make_user_prompt(analysis, brief, target_seconds)}])
     text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
     p = extract_json(text)
     p["media"] = analysis.get("media", {})
+    p.setdefault("faces", analysis.get("faces", {}))
+    if analysis.get("sync"):
+        p["sync"] = analysis["sync"]
+    if style:
+        p["style"] = style
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(p, f, ensure_ascii=False, indent=1)
     print("편집 계획 ->", out_path)
@@ -88,10 +125,10 @@ def plan(analysis_path, out_path, brief="", target_seconds=None, model=None):
     return out_path
 
 
-def write_prompt_only(analysis_path, out_path, brief="", target_seconds=None):
+def write_prompt_only(analysis_path, out_path, brief="", target_seconds=None, style=None):
     """API 키 없이 쓰는 경우: 프롬프트를 파일로 저장 → Claude 앱에 붙여넣고 결과 JSON을 edit_plan.json으로 저장."""
     with open(analysis_path, encoding="utf-8") as f:
         analysis = json.load(f)
     with open(out_path, "w", encoding="utf-8") as f:
-        f.write(SYSTEM + "\n\n---\n\n" + make_user_prompt(analysis, brief, target_seconds))
+        f.write(system_prompt(style) + "\n\n---\n\n" + make_user_prompt(analysis, brief, target_seconds))
     print("프롬프트 저장 ->", out_path)

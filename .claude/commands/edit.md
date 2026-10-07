@@ -1,6 +1,6 @@
 ---
 description: 원본 인터뷰 폴더로 캡컷 가편집 프로젝트를 만든다 (Claude가 직접 편집 계획)
-argument-hint: <원본폴더> <프로젝트이름> [편집 요청]
+argument-hint: <원본폴더> <프로젝트이름> [스타일: target|talk_short] [편집 요청]
 ---
 
 인자: $ARGUMENTS
@@ -14,13 +14,14 @@ argument-hint: <원본폴더> <프로젝트이름> [편집 요청]
 
 2. **분석**
    `python capcut_agent/agent.py analyze --clips "<원본폴더>" --broll B롤 --work "work/<이름>"`
-   (GPU가 없으면 `--device cpu --whisper medium`)
+   (GPU가 없으면 `--device cpu --whisper medium`, 같은 장면을 여러 카메라로 찍었으면 `--multicam`)
 
 3. **편집 계획 (Claude가 직접)**
    - `work/<이름>/analysis.json`의 전사를 읽고, 편집 원칙에 따라 `work/<이름>/edit_plan.json`을 작성한다.
    - 형식: CLAUDE.md의 edit_plan 설명을 따른다. `main[].lines`에는 시간을 적지 않는다.
    - 음성인식 오타는 문맥으로 교정한다. 확신이 없는 단어는 플랜의 `notes`에 적어 사용자에게 알린다.
-   - 기본 스타일은 `target`(docs/target-style.md). 역할(role), 맥락 라벨(label), 엔딩(ending)을 채운다. 영어는 요청 시에만.
+   - 스타일 지침은 `python -c "import sys;sys.path.insert(0,'capcut_agent');import planner;print(planner.system_prompt('<스타일>'))"`로 확인한다.
+   - 기본 스타일은 `target`(docs/target-style.md). talk_short면 상단 제목(title) 2줄을 2~3개 후보로 사용자에게 제안하고 하나를 고른다. 역할(role), 맥락 라벨(label), 엔딩(ending)을 채운다. 영어는 요청 시에만.
    - B롤이 부족하면 `broll_ideas`에 재연 이미지 아이디어를 적고 사용자에게 알려 준다.
    - 컷을 고른 이유(뺀 부분 포함)를 사용자에게 3~5줄로 요약한다.
 

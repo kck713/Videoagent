@@ -80,16 +80,25 @@ def build_from_plan(plan, name, drafts_root=None, style=None, bgm=None, path_map
     # 1) 메인 컷 + 자막
     at = 0.0
     prev_z = None
+    sync = plan.get("sync", {})          # 멀티캠: {카메라 src: 기준 대비 오프셋(초)} (sync.py)
+    speakers = plan.get("speakers", {})  # {"A": {"name": "...", "title": "..."}}
+    name_tags = []                       # (t0, dur, speaker)
+    prev_speaker = None
     for i, clip in enumerate(plan["main"]):
         src, a, b = clip["src"], float(clip["in"]), float(clip["out"])
-        inf = info(src) or {}
+        # 멀티캠: 자막·컷 시간은 기준 카메라(src) 기준, 화면은 angle 카메라로
+        vsrc, va = src, a
+        if clip.get("angle") and clip["angle"] != src:
+            vsrc = clip["angle"]
+            va = a + float(sync.get(vsrc, sync.get(win(vsrc), 0.0))) - float(sync.get(src, 0.0))
+        inf = info(vsrc) or {}
         if mode == "fixed":
             scale, tx, ty = float(lay.get("scale", 1.0)), float(lay.get("x", 0.0)), float(lay.get("y", 0.0))
         else:
             if not inf.get("width"):
                 from capcut_draft import probe
-                inf = probe(win(src))
-                media[src] = inf
+                inf = probe(win(vsrc))
+                media[vsrc] = inf
             if clip.get("zoom") is not None:
                 z = float(clip["zoom"])
             else:  # 직전 컷과 다른 배율로 교차 (점프컷을 샷 변화로 보이게)
@@ -97,9 +106,16 @@ def build_from_plan(plan, name, drafts_root=None, style=None, bgm=None, path_map
                 z = float(cand[0])
             prev_z = z
             tgt = lay.get("closeup_face_target" if z > 1.05 else "face_target", [0.5, 0.40])
-            face = clip.get("face") or face_for_range(faces.get(src) or faces.get(win(src)), a, b)
+            if clip.get("focus"):            # 특정 부위(원본 좌표 0~1)를 화면 가운데로 — 극단 확대용
+                face, tgt = clip["focus"], [0.5, 0.5]
+            else:
+                face = clip.get("face") or face_for_range(faces.get(vsrc) or faces.get(win(vsrc)), va, va + b - a)
             scale, tx, ty = framing(inf, cw, ch, face, zoom=z, face_target=tuple(tgt))
-        seg = d.add_video("main", win(src), a, b - a, at, info=inf or None, scale=scale, transform=(tx, ty))
+        seg = d.add_video("main", win(vsrc), va, b - a, at, info=inf or None, scale=scale, transform=(tx, ty))
+        spk = clip.get("speaker")
+        if spk and spk in speakers and (spk != prev_speaker or clip.get("name_tag")):
+            name_tags.append((at, spk))
+        prev_speaker = spk or prev_speaker
         real = seg["target_timerange"]["duration"] / 1e6
         for s in clip.get("subs", []):
             s0, s1 = max(a, float(s["start"])), min(b, float(s["end"]))
@@ -111,8 +127,6 @@ def build_from_plan(plan, name, drafts_root=None, style=None, bgm=None, path_map
             st["_highlight"] = s.get("highlight") or []
             st["highlight_color"] = style.get("highlight_color", "#F2D475")
             text = s.get("ko", "")
-            if st.get("wrap") and text and not text.startswith(st["wrap"][0]):
-                text = f"{st['wrap'][0]}{text}{st['wrap'][1]}"
             if text:
                 d.add_text("sub_ko", text, t0, s1 - s0, st, group_id=group_ko)
             if s.get("en") and en_style:
@@ -162,6 +176,57 @@ def build_from_plan(plan, name, drafts_root=None, style=None, bgm=None, path_map
         if dur > 0.1:
             _add_nonoverlap(d, kind, lb["text"], t0, dur, dict(style.get(kind) or {}))
 
+    # 3-1) 화자 이름표 (화자가 바뀔 때 첫 dur초)
+    nt = style.get("name_tag")
+    if nt:
+        for t0, spk in name_tags:
+            sp = speakers[spk]
+            dur = min(float(nt.get("dur", 2.5)), total - t0)
+            if sp.get("title"):
+                _add_nonoverlap(d, "name_title", sp["title"], t0, dur, dict(nt["title"]))
+            if sp.get("name"):
+                _add_nonoverlap(d, "name_tag", sp["name"], t0, dur, dict(nt["name"]))
+
+    # 3-2) 원형 강조 표시 (callouts: 화면 좌표 x,y 0~1, 위가 0)
+    if plan.get("callouts"):
+        from assets import ring
+        co = style.get("callout") or {}
+        ring_png = ring(os.path.join(drafts_root, name, "assets", "ring.png"), color=co.get("ring_color", "#FFD43B"))
+        for c in plan["callouts"]:
+            t0, dur = float(c["at"]), min(float(c.get("dur", 1.5)), total - float(c["at"]))
+            if dur <= 0.1:
+                continue
+            d.add_video("callout", win(ring_png), 0.0, dur, t0, overlay=True, volume=0.0,
+                        info={"width": 400, "height": 400, "image": True},
+                        scale=float(c.get("size", co.get("ring_scale", 0.35))),
+                        transform=((float(c["x"]) - 0.5) * 2, (0.5 - float(c["y"])) * 2))
+
+    # 3-3) 상단 고정 제목 (영상 전체)
+    title = plan.get("title")
+    if title and style.get("title"):
+        for k in ("line1", "line2"):
+            if title.get(k):
+                d.add_text(f"title_{k}", title[k], 0.0, total, dict(style["title"][k]))
+
+    # 3-4) 테두리 (맨 위 오버레이, 영상 전체)
+    if style.get("frame") and plan.get("frame", True):
+        from assets import frame_border
+        fr = style["frame"]
+        png = frame_border(os.path.join(drafts_root, name, "assets", "frame.png"), cw, ch,
+                           fr.get("inset", 0.028), fr.get("width", 6), fr.get("radius", 0.035),
+                           tuple(fr.get("colors", ["#FFA237", "#F5C760"])))
+        d.add_video("frame", win(png), 0.0, total, 0.0, overlay=True, volume=0.0,
+                    info={"width": cw, "height": ch, "image": True}, scale=1.0)
+
+    # 3-5) 하단 면책 문구
+    disc = plan.get("disclaimer")
+    if disc and style.get("disclaimer"):
+        if isinstance(disc, str):
+            disc = {"text": disc}
+        dur = min(float(disc.get("dur", 4.0)), total)
+        d.add_text("disclaimer", disc["text"], total - dur if not disc.get("all") else 0.0,
+                   total if disc.get("all") else dur, dict(style["disclaimer"]))
+
     # 4) 엔딩 카드
     ending = plan.get("ending")
     if ending and ending.get("text"):
@@ -189,6 +254,12 @@ def build_from_plan(plan, name, drafts_root=None, style=None, bgm=None, path_map
                        timeout=60, capture_output=True)
     except Exception:
         pass
+    if plan.get("sticker_notes"):
+        notes = os.path.join(folder, "스티커_메모.txt")
+        with open(notes, "w", encoding="utf-8") as f:
+            for n in plan["sticker_notes"]:
+                f.write(f"{float(n['at']):6.1f}s  {n.get('text', '')}\n")
+        print(f"  스티커 넣을 위치 {len(plan['sticker_notes'])}곳 → {notes}")
     n_sub = len(d.tracks.get("sub_ko", {}).get("segments", []))
     n_lab = sum(len(d.tracks[k]["segments"]) for k in ("label", "top_label") if k in d.tracks)
     print(f"드래프트 생성 완료: {folder}\n  길이 {total:.1f}s / 메인 컷 {len(plan['main'])} / 자막 {n_sub} / "
@@ -222,7 +293,9 @@ def main():
             p.add_argument("--broll")
             p.add_argument("--whisper", default="large-v3")
             p.add_argument("--device", default="auto", help="cpu / cuda / auto")
+            p.add_argument("--multicam", action="store_true", help="원본 폴더 영상들을 같은 장면의 여러 카메라로 보고 오디오로 동기화")
         if c in ("run", "plan"):
+            p.add_argument("--style", help="스타일 프리셋 (target, talk_short, interview_1006)")
             p.add_argument("--brief", default="")
             p.add_argument("--target", type=float)
             p.add_argument("--model")
@@ -231,7 +304,8 @@ def main():
             p.add_argument("--name", required=True)
             p.add_argument("--bgm")
             p.add_argument("--drafts-root", default=DEFAULT_ROOT)
-            p.add_argument("--style", help="스타일 프리셋 이름(target, interview_1006) 또는 JSON 경로")
+            if c == "build":
+                p.add_argument("--style", help="스타일 프리셋 이름(target, talk_short, interview_1006) 또는 JSON 경로")
         if c == "build":
             p.add_argument("--plan", default=None)
     a = ap.parse_args()
@@ -241,14 +315,14 @@ def main():
 
     if a.cmd in ("run", "analyze"):
         from analyze import analyze
-        analyze(a.clips, a.work, a.broll, a.whisper, a.device)
+        analyze(a.clips, a.work, a.broll, a.whisper, a.device, multicam=a.multicam)
     if a.cmd in ("run", "plan"):
         import planner
         if a.prompt_only or not os.environ.get("ANTHROPIC_API_KEY"):
-            planner.write_prompt_only(analysis, os.path.join(a.work, "plan_prompt.txt"), a.brief, a.target)
+            planner.write_prompt_only(analysis, os.path.join(a.work, "plan_prompt.txt"), a.brief, a.target, a.style)
             print("ANTHROPIC_API_KEY가 없어 프롬프트만 저장했습니다. Claude 응답 JSON을 work/edit_plan.json 으로 저장 후 build 하세요.")
             return
-        planner.plan(analysis, plan_path, a.brief, a.target, a.model)
+        planner.plan(analysis, plan_path, a.brief, a.target, a.model, a.style)
     if a.cmd in ("run", "build"):
         with open(plan_path, encoding="utf-8") as f:
             plan = json.load(f)
@@ -260,12 +334,18 @@ def main():
                     for c in json.load(f)["clips"]:
                         speech[c["src"]] = [(s["start"], s["end"]) for s in c["transcript"]]
             subtimer.apply(plan, speech)
+            st = load_style(a.style or plan.get("style"))
+            tg = st.get("tighten") or {}
+            if tg:
+                subtimer.tighten(plan, max_pause=tg.get("max_pause"), max_cut=tg.get("max_cut"))
             with open(plan_path, "w", encoding="utf-8") as f:
                 json.dump(plan, f, ensure_ascii=False, indent=1)
         if os.path.exists(analysis):
             with open(analysis, encoding="utf-8") as f:
                 an = json.load(f)
             plan.setdefault("faces", an.get("faces", {}))
+            if an.get("sync"):
+                plan.setdefault("sync", an["sync"])
             for k, v in an.get("media", {}).items():
                 plan.setdefault("media", {}).setdefault(k, v)
         build_from_plan(plan, a.name, a.drafts_root, load_style(a.style or plan.get("style")), bgm=a.bgm)

@@ -23,6 +23,7 @@ Claude API 키(`ANTHROPIC_API_KEY`)가 없으면 편집 계획 단계는 프롬�
 ## 스타일
 
 기본은 `target` 프리셋입니다([docs/target-style.md](docs/target-style.md)). 9:16 꽉 채움, 얼굴 기준 크롭, 클로즈업/미디엄 교차, 흰/노랑 한글 자막, 검정 박스 라벨, 엔딩 카드를 씁니다.
+토크형 빠른 숏폼은 `--style talk_short`입니다. 상단 고정 제목(자동 제안), 테두리, 괄호 자막, 이름표, 면책 문구, 빠른 컷이 들어갑니다. 여러 카메라로 찍었다면 `analyze --multicam`을 씁니다.
 예전 1006 가편집 스타일(한/영 자막, 위아래 여백)은 `--style interview_1006` 옵션으로 씁니다. 미리보기는 `python capcut_agent/preview.py <드래프트 폴더>`로 만듭니다.
 
 ## 파이프라인

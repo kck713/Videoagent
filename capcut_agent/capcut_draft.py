@@ -228,6 +228,9 @@ class Draft:
 
     # ── 텍스트 (자막)
     def add_text(self, track_key, text, start, dur, style, group_id=None):
+        w = style.get("wrap")
+        if w and text and not text.startswith(w[0]):
+            text = f"{w[0]}{text}{w[1]}"
         tm = copy.deepcopy(self.pack["text_mat"])
         color = hex_to_rgb(style.get("color", "#FFFFFF"))
         size = float(style.get("size", 10))
@@ -268,7 +271,7 @@ class Draft:
             "recognize_text": text, "recognize_task_id": "",
             "words": {"start_time": [], "end_time": [], "text": []},
             "current_words": {"start_time": [], "end_time": [], "text": []},
-            "type": "subtitle", "group_id": group_id or "", "language": style.get("language", "ko-KR"),
+            "type": "subtitle" if group_id else "text", "group_id": group_id or "", "language": style.get("language", "ko-KR"),
             "text_color": style.get("color", "#FFFFFF"), "font_size": size, "font_path": font,
             "bold_width": 0.008 if style.get("bold") else 0.0,
             "alignment": 1, "line_max_width": float(style.get("line_max_width", 0.82)),
@@ -398,7 +401,7 @@ class Draft:
         self.finalize()
         win_root = fwd(path_map.get(drafts_root, drafts_root)) if path_map else fwd(drafts_root)
         folder = os.path.join(drafts_root, name)
-        if os.path.exists(folder):
+        if os.path.exists(os.path.join(folder, "draft_content.json")):
             raise FileExistsError(f"이미 존재: {folder} (다른 이름을 쓰세요)")
         os.makedirs(os.path.join(folder, "Timelines", self.d["id"]), exist_ok=True)
         win_folder = f"{win_root}/{name}"

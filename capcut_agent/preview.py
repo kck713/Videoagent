@@ -1,7 +1,7 @@
 """생성한 캡컷 드래프트의 대략적인 미리보기(스틸 컷 모음) 렌더링.
 
 캡컷 없이 구도·자막 위치·라벨·엔딩 카드를 눈으로 확인하는 용도입니다.
-글꼴과 크기는 근사치입니다(캡컷 글자 크기 1 ≈ 1920px 캔버스에서 약 5.5px로 가정).
+글꼴과 크기는 근사치입니다(캡컷 글자 크기 1 ≈ 1920px 캔버스에서 약 9px — 2026-10-07 사용자가 캡컷에서 9→5.5로 줄인 것으로 보정).
 
     python capcut_agent/preview.py <드래프트 폴더> [--out preview.jpg] [--frames 8] [--map "C:/=/mnt/c/"]
 """
@@ -12,7 +12,7 @@ import subprocess
 
 from PIL import Image, ImageDraw, ImageFont
 
-PX_PER_SIZE = 5.5
+PX_PER_SIZE = 9.0
 
 
 def _font(px, bold=False):
@@ -51,7 +51,18 @@ def render_at(d, mats, t_us, W, H, path_map=None, frame_override=None):
             kind, m = mats.get(s["material_id"], (None, None))
             if tr["type"] == "video" and m:
                 src_t = (s["source_timerange"]["start"] + (t_us - tt["start"])) / 1e6
-                img = frame_override(m["path"], src_t) if frame_override else _frame(m["path"], src_t, path_map)
+                img = None
+                if m.get("type") == "photo":
+                    pth = m["path"]
+                    for a0, b0 in (path_map or {}).items():
+                        if pth.startswith(a0):
+                            pth = b0 + pth[len(a0):]
+                    if os.path.exists(pth):
+                        img = Image.open(pth).convert("RGBA")
+                elif frame_override:
+                    img = frame_override(m["path"], src_t)
+                else:
+                    img = _frame(m["path"], src_t, path_map)
                 if img is None:
                     img = Image.new("RGB", (max(1, m["width"] // 4), max(1, m["height"] // 4)), (60, 60, 70))
                 contain = min(W / m["width"], H / m["height"])
@@ -60,7 +71,7 @@ def render_at(d, mats, t_us, W, H, path_map=None, frame_override=None):
                 img = img.resize((max(1, dw), max(1, dh)))
                 cx = W / 2 + s["clip"]["transform"]["x"] * W / 2
                 cy = H / 2 - s["clip"]["transform"]["y"] * H / 2
-                canvas.paste(img, (int(cx - dw / 2), int(cy - dh / 2)))
+                canvas.paste(img, (int(cx - dw / 2), int(cy - dh / 2)), img if img.mode == "RGBA" else None)
             elif tr["type"] == "text" and m:
                 c = json.loads(m["content"])
                 text = c["text"]
@@ -68,22 +79,21 @@ def render_at(d, mats, t_us, W, H, path_map=None, frame_override=None):
                 px = st.get("size", 9) * PX_PER_SIZE
                 font = _font(px, st.get("bold"))
                 col = tuple(int(v * 255) for v in st["fill"]["content"]["solid"]["color"])
-                if len(c["styles"]) > 1:  # 부분 강조는 첫 run 색만 근사
-                    pass
                 draw = ImageDraw.Draw(canvas, "RGBA")
                 lines = text.split("\n")
                 lh = int(px * 1.3)
                 tw = max(draw.textlength(l, font=font) for l in lines)
                 cy = H / 2 - s["clip"]["transform"]["y"] * H / 2
+                cxt = W / 2 + s["clip"]["transform"]["x"] * W / 2
                 top = cy - lh * len(lines) / 2
                 if m.get("background_color"):
                     a = int(255 * float(m.get("background_alpha", 1)))
                     pad = px * 0.35
-                    draw.rectangle([W / 2 - tw / 2 - pad, top - pad * 0.6, W / 2 + tw / 2 + pad,
+                    draw.rectangle([cxt - tw / 2 - pad, top - pad * 0.6, cxt + tw / 2 + pad,
                                     top + lh * len(lines) + pad * 0.3], fill=(0, 0, 0, a))
                 for j, l in enumerate(lines):
                     lw = draw.textlength(l, font=font)
-                    xy = (W / 2 - lw / 2, top + j * lh)
+                    xy = (cxt - lw / 2, top + j * lh)
                     if m.get("has_shadow"):
                         draw.text((xy[0] + 2, xy[1] + 2), l, font=font, fill=(0, 0, 0, 200))
                     draw.text(xy, l, font=font, fill=col)
@@ -96,13 +106,11 @@ def preview(folder, out, frames=8, path_map=None, times=None, frame_override=Non
     W, H = d["canvas_config"]["width"], d["canvas_config"]["height"]
     mats = {m["id"]: (k, m) for k, v in d["materials"].items() if isinstance(v, list)
             for m in v if isinstance(m, dict) and "id" in m}
-    mats = {k: v for k, v in mats.items()}
-    mats = {mid: (k, m) for mid, (k, m) in mats.items()}
     if times is None:
         times = [d["duration"] * (i + 0.5) / frames / 1e6 for i in range(frames)]
     tiles = []
     for t in times:
-        img = render_at(d, {k: v for k, v in mats.items()}, int(t * 1e6), W, H, path_map, frame_override)
+        img = render_at(d, mats, int(t * 1e6), W, H, path_map, frame_override)
         img = img.resize((W // 4, H // 4))
         ImageDraw.Draw(img).text((6, 6), f"{t:.1f}s", fill=(255, 0, 0))
         tiles.append(img)
@@ -125,5 +133,4 @@ if __name__ == "__main__":
     a = ap.parse_args()
     pm = dict(x.split("=", 1) for x in a.map)
     ts = [float(x) for x in a.at.split(",")] if a.at else None
-    # render_at expects mats as {id: (kind, mat)} → unwrap inside
     print(preview(a.folder, a.out, a.frames, pm, ts))

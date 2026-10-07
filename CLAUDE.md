@@ -20,7 +20,10 @@ capcut_agent/
   capcut_draft.py   Draft 클래스: template_pack.json 복제 방식으로 세그먼트/머티리얼 생성, 검증, 저장, 목록 등록
   make_template.py  실제 캡컷 프로젝트에서 template_pack.json 추출 + sanitize
   preview.py        드래프트 대략 미리보기(스틸 컷 모음) — 캡컷 없이 구도/자막/라벨 확인
+  assets.py         스타일 그래픽 PNG 생성(테두리, 강조 원) — 캡컷 도형/스티커 대신 사진 오버레이로 사용
+  sync.py           멀티캠 오디오 동기화(카메라 간 오프셋)
   styles/target.json         목표 스타일(기본): 9:16 꽉 채움 + 얼굴 기준 크롭 + 펀치인, 흰/노랑 자막, 라벨, 엔딩 카드
+  styles/talk_short.json     토크형 빠른 숏폼(샘플 2): 상단 고정 제목, 테두리, 괄호 자막, 이름표, 면책, 빠른 컷(tighten)
   styles/interview_1006.json 1006 가편집 스타일(가로 원본 + 위아래 여백, 한/영 자막)
 examples/edit_plan_example.json   합성 예시 플랜
 tests/test_build.py               스모크 테스트 (미디어/캡컷 없이 실행)
@@ -39,6 +42,10 @@ scripts/setup.bat, run.bat        Windows 원클릭 설치/실행 (원본/, B롤
    - `broll[]`: `{src, at(타임라인 초), dur, in, fit: fill|fit|pip, pip{scale,x,y}?, caption?, ai?(상단 "AI로 생성한 이미지" 라벨), top_label?}` — 이미지(.png/.jpg)는 photo 세그먼트
    - `labels[]`: `{text, at, dur, kind: context|top}` / `ending`: `{text, dur}` / `broll_ideas[]`: 재연 이미지 아이디어(생성용 프롬프트)
    - `style`: 프리셋 이름(기본 `target`) / `bgm`: `{src, volume, fade_out}` / `layout`: 프리셋 덮어쓰기
+   - talk_short 등: `title {line1, line2}`(플래너가 제안), `speakers {"A": {name, title}}` + `main[].speaker`, `disclaimer`, `sticker_notes [{at, text}]`
+   - 극단 확대: `main[].focus {x,y}`(원본 좌표) + `zoom` 2~2.5, `callouts [{at, dur, x, y}]`(화면 좌표, 노란 원)
+   - 멀티캠: analyze `--multicam` → `sync {src: offset}`; 컷별 `main[].angle`에 다른 카메라 src (in/out·자막은 기준 카메라 시간)
+   - 스타일의 `tighten {max_pause, max_cut}`이 있으면 build 때 숨 제거 + 긴 컷 분할을 자동 적용
 3. `build` → 캡컷 프로젝트 폴더 + `root_meta_info.json` 등록 (등록 전 자동 백업)
 
 ## Claude Code에서 작업하는 법
@@ -72,3 +79,5 @@ scripts/setup.bat, run.bat        Windows 원클릭 설치/실행 (원본/, B롤
 - 얼굴 검출은 OpenCV Haar(정면 얼굴)라 옆모습·가림에 약하다. 못 찾으면 가운데 기준으로 크롭한다
 - 자막 글꼴은 캡컷 기본 시스템 폰트다. 목표 샘플의 둥근 손글씨체는 캡컷에서 폰트를 받은 뒤 그 경로를 styles/*.json `font_path`에 넣어야 한다
 - 텍스트 외곽선(strokes)은 캡컷에서 아직 검증 전이라 그림자만 쓴다
+- 장식 텍스트(라벨·제목·엔딩·이름표)는 반드시 `type: "text"` — `subtitle`이면 캡컷 자막 일괄 편집에 같이 덮어써진다(group_id 없으면 자동으로 text)
+- 캡컷 스티커/이모지는 자동 삽입 불가(서버 리소스 ID 필요). `sticker_notes`로 위치만 남긴다

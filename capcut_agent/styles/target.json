@@ -18,7 +18,7 @@
  "roles": {
   "normal": {
    "color": "#FFFFFF",
-   "size": 9,
+   "size": 5.5,
    "y": -0.238,
    "language": "ko-KR",
    "shadow": true,
@@ -29,7 +29,7 @@
   },
   "quote": {
    "color": "#F2D475",
-   "size": 9,
+   "size": 5.5,
    "y": -0.238,
    "language": "ko-KR",
    "shadow": true,
@@ -40,7 +40,7 @@
   },
   "emphasis": {
    "color": "#FFFFFF",
-   "size": 12,
+   "size": 7.3,
    "bold": true,
    "y": -0.238,
    "language": "ko-KR",
@@ -52,7 +52,7 @@
   },
   "alert": {
    "color": "#E0324B",
-   "size": 12,
+   "size": 7.3,
    "bold": true,
    "y": -0.238,
    "language": "ko-KR",
@@ -64,7 +64,7 @@
   },
   "aside": {
    "color": "#F2D475",
-   "size": 8,
+   "size": 4.9,
    "y": -0.238,
    "language": "ko-KR",
    "wrap": [
@@ -82,7 +82,7 @@
  "en": null,
  "label": {
   "color": "#FFFFFF",
-  "size": 5.5,
+  "size": 3.4,
   "y": -0.164,
   "bg_color": "#000000",
   "bg_alpha": 0.85,
@@ -90,7 +90,7 @@
  },
  "top_label": {
   "color": "#FFFFFF",
-  "size": 4.5,
+  "size": 2.7,
   "y": 0.89,
   "bg_color": "#000000",
   "bg_alpha": 0.85,
@@ -98,7 +98,7 @@
  },
  "ending": {
   "color": "#FFFFFF",
-  "size": 8,
+  "size": 4.9,
   "y": -0.06,
   "bg_color": "#000000",
   "bg_alpha": 0.9,
@@ -107,7 +107,7 @@
  },
  "pip_caption": {
   "color": "#FFFFFF",
-  "size": 7,
+  "size": 4.3,
   "y": -0.12,
   "bold": true,
   "language": "ko-KR",
@@ -121,5 +121,7 @@
  "bgm": {
   "volume": 0.022,
   "fade_out": 4.67
- }
+ },
+ "planner_hints": "[target 스타일] 60~90초. 1인 인터뷰, 컷 3~6초. 흐름: 훅 → 고민/경험 → 계기 → 메시지 → 엔딩 카드.",
+ "_크기_보정": "2026-10-07: 캡컷 실측 기준으로 전체 글자 크기 ×0.61 (사용자가 본 자막 9→5.5로 조정)"
 }

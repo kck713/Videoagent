@@ -121,6 +121,77 @@ def test_face_track_per_cut():
     assert face_for_range(face, 50, 55)["x"] == 0.5
 
 
+def test_talk_short_features():
+    p = _plan()
+    p["style"] = "talk_short"
+    p["title"] = {"line1": "테스트 대상 상황", "line2": "반전 결말...!"}
+    p["speakers"] = {"A": {"name": "홍길동", "title": "원장"}}
+    p["main"][0]["speaker"] = "A"
+    p["callouts"] = [{"at": 1.0, "dur": 1.0, "x": 0.4, "y": 0.6}]
+    p["disclaimer"] = "본 콘텐츠는 정보 전달 목적입니다."
+    p["main"][1]["focus"] = {"x": 0.45, "y": 0.6}
+    p["main"][1]["zoom"] = 2.2
+    with tempfile.TemporaryDirectory() as root:
+        folder = build_from_plan(copy.deepcopy(p), "talk", root, load_style("talk_short"))
+        d = _load(folder)
+        mats = {m["id"]: m for m in d["materials"]["texts"]}
+        texts = {json.loads(m["content"])["text"]: m for m in mats.values()}
+        for t in ("테스트 대상 상황", "반전 결말...!", "홍길동", "원장", "본 콘텐츠는 정보 전달 목적입니다.", "(실제 경험)"):
+            assert t in texts, t
+        # 제목은 영상 전체, 일반 텍스트 타입(자막 일괄 편집 대상 아님)
+        assert texts["반전 결말...!"]["type"] == "text" and texts["(실제 경험)"]["type"] == "text"
+        assert texts["정말 막막했어요"]["type"] == "subtitle"
+        tt = [s for t in d["tracks"] if t["type"] == "text" for s in t["segments"]
+              if s["material_id"] == texts["반전 결말...!"]["id"]][0]["target_timerange"]
+        assert tt["start"] == 0 and tt["duration"] == d["duration"]
+        # 테두리 PNG 오버레이 + 원형 강조 생성
+        assert os.path.exists(os.path.join(folder, "assets", "frame.png"))
+        assert os.path.exists(os.path.join(folder, "assets", "ring.png"))
+        paths = [v["path"] for v in d["materials"]["videos"]]
+        assert any(x.endswith("frame.png") for x in paths) and any(x.endswith("ring.png") for x in paths)
+        # 극단 확대 컷
+        main = next(t for t in d["tracks"] if t["type"] == "video" and t["flag"] == 0)
+        assert main["segments"][1]["clip"]["scale"]["x"] > 6.5
+
+
+def test_tighten_splits_long_cut_and_pauses():
+    plan = {"main": [{"src": "x", "in": 0.0, "out": 9.0, "subs": [
+        {"ko": "a", "start": 0.0, "end": 3.0}, {"ko": "b", "start": 3.0, "end": 6.0}, {"ko": "c", "start": 6.0, "end": 9.0}]}]}
+    subtimer.tighten(plan, max_cut=2.5)
+    assert len(plan["main"]) == 3
+    assert [c["subs"][0]["ko"] for c in plan["main"]] == ["a", "b", "c"]
+    assert plan["main"][0]["in"] == 0.0 and plan["main"][-1]["out"] == 9.0
+
+
+def test_multicam_angle_offset():
+    p = _plan()
+    cam2 = "C:/Videos/interview/B001.MP4"
+    p["media"][cam2] = {"duration": 70.0, "width": 1920, "height": 1080, "has_audio": True, "has_video": True}
+    p["sync"] = {p["main"][0]["src"]: 0.0, cam2: -2.5}
+    p["main"][1]["angle"] = cam2
+    with tempfile.TemporaryDirectory() as root:
+        d = _load(build_from_plan(copy.deepcopy(p), "mc", root, load_style("target")))
+        vids = {v["id"]: v for v in d["materials"]["videos"]}
+        main = next(t for t in d["tracks"] if t["type"] == "video" and t["flag"] == 0)
+        s1 = main["segments"][1]
+        assert vids[s1["material_id"]]["path"] == cam2
+        assert abs(s1["source_timerange"]["start"] / 1e6 - (p["main"][1]["in"] - 2.5)) < 0.05
+
+
+def test_sync_offset_detection():
+    import numpy as np
+    from sync import offset
+    rng = np.random.default_rng(0)
+    sr = 8000
+    env = np.repeat(rng.random(400) > 0.6, sr // 20).astype(np.float32)  # 말소리처럼 켜졌다 꺼지는 신호
+    ref = env * rng.standard_normal(len(env)).astype(np.float32)
+    shift = int(1.7 * sr)
+    cam = np.concatenate([np.zeros(shift, np.float32), ref])[: len(ref)] * 0.5
+    cam = cam + 0.01 * rng.standard_normal(len(cam)).astype(np.float32)
+    off, conf = offset(ref, cam, sr)
+    assert abs(off - 1.7) < 0.02, off
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

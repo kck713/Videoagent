@@ -77,7 +77,9 @@ def transcribe(path, model, language="ko"):
     return out
 
 
-def analyze(clips_dir, out_dir, broll_dir=None, model_size="large-v3", device="auto", language="ko"):
+def analyze(clips_dir, out_dir, broll_dir=None, model_size="large-v3", device="auto", language="ko", multicam=False):
+    """multicam=True: 원본 폴더의 영상들을 같은 장면을 찍은 카메라들로 보고,
+    가장 긴 영상을 기준(전사 대상)으로 나머지의 오프셋을 계산(sync)."""
     os.makedirs(out_dir, exist_ok=True)
     clips = list_media(clips_dir, VIDEO_EXT)
     if not clips:
@@ -88,8 +90,22 @@ def analyze(clips_dir, out_dir, broll_dir=None, model_size="large-v3", device="a
     model = WhisperModel(model_size, device=device, compute_type=compute)
 
     result = {"clips": [], "broll": [], "media": {}}
+    infos = {c: probe(c) for c in clips}
+    if multicam and len(clips) > 1:
+        from sync import sync_clips
+        ref = max(clips, key=lambda c: infos[c]["duration"])
+        print(f"멀티캠 동기화 (기준: {os.path.basename(ref)})")
+        result["sync"], result["sync_confidence"] = sync_clips(ref, [c for c in clips if c != ref])
+        result["reference"] = ref
+        for c in clips:   # 기준 외 카메라는 화면용: 얼굴 위치만
+            if c != ref:
+                result["media"][c] = infos[c]
+                face = detect_face(c, infos[c]["duration"])
+                if face:
+                    result.setdefault("faces", {})[c] = face
+        clips = [ref]
     for c in clips:
-        info = probe(c)
+        info = infos[c]
         result["media"][c] = info
         print(f"전사 중: {os.path.basename(c)} ({info['duration']:.1f}s)")
         face = detect_face(c, info["duration"])
