@@ -6,7 +6,23 @@
 - 대상: Windows + CapCut 9.4.0 (드래프트 = 평문 JSON)
 - 방식: 실제 캡컷 프로젝트에서 뽑은 템플릿을 복제해 드래프트 생성 → 캡컷 프로젝트 목록에 자동 등록
 
-## 빠른 시작 (Windows)
+## 폴더로 전달받은 경우 (GitHub 없이)
+
+이 폴더를 통째로 복사해서 받았다면 아래만 하면 됩니다.
+
+1. **Python 3.10 이상** 설치 (설치 화면에서 "Add python.exe to PATH" 체크)
+2. **CapCut 데스크톱** 설치 후 한 번 실행 (9.4.0 권장)
+3. 폴더 안의 **`설치.bat`** 더블클릭 → ffmpeg와 필요한 패키지 설치, Claude Code 명령(`claude_commands` → `.claude\commands`) 등록
+4. `원본` 폴더에 인터뷰 영상, (선택) `B롤`, `BGM` 폴더에 파일 넣기
+5. **캡컷을 끄고** 사용
+   - **Claude Code가 있으면(권장):** 이 폴더에서 Claude Code를 열고 `/edit 원본 <프로젝트이름> talk_short`처럼 입력. API 키 없이 Claude가 직접 편집 계획을 짭니다.
+   - **Claude Code 없이:** `실행.bat` 더블클릭. 이 경우 편집 계획 단계에 Claude API 키(`ANTHROPIC_API_KEY`)가 필요합니다.
+6. 캡컷을 열면 목록 맨 앞에 새 프로젝트가 있습니다.
+
+캡컷 버전이 9.4.0이 아니면, 그 캡컷에서 아무 프로젝트나 하나 만들어 저장한 뒤 이렇게 실행해 템플릿을 다시 뽑으세요.
+`python capcut_agent\make_template.py "%LOCALAPPDATA%\CapCut\User Data\Projects\com.lveditor.draft\<그 프로젝트 이름>"`
+
+## 빠른 시작 (Windows, GitHub)
 
 ```
 git clone https://github.com/kck713/Videoagent
