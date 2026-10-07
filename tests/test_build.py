@@ -247,6 +247,27 @@ def test_planner_validates_and_retries():
         assert os.path.exists(os.path.join(d, "edit_plan_raw.txt"))
 
 
+def test_free_mode_import_plan():
+    import planner
+    analysis = {"clips": [{"src": "C:/v/A.MP4", "duration": 30.0, "transcript": [], "silences": []}],
+                "media": {"C:/v/A.MP4": {"duration": 30.0, "width": 1920, "height": 1080}}}
+    good = {"main": [{"src": "C:/v/A.MP4", "in": 1.0, "out": 4.0, "lines": [{"ko": "안녕하세요"}]}],
+            "title": {"line1": "a", "line2": "b"}}
+    with tempfile.TemporaryDirectory() as d:
+        ap, pp = os.path.join(d, "analysis.json"), os.path.join(d, "edit_plan.json")
+        json.dump(analysis, open(ap, "w", encoding="utf-8"))
+        open(pp, "w", encoding="utf-8").write("")
+        assert planner.import_plan(ap, pp, "talk_short")                       # 빈 파일
+        open(pp, "w", encoding="utf-8").write('{"main": [{"src": "C:/v/A.MP4", "in": 9, "out": 2, "lines": []}]}')
+        assert planner.import_plan(ap, pp, "talk_short")                       # 값 오류
+        assert os.path.exists(os.path.join(d, "edit_plan_fix.txt"))
+        # claude.ai 답변처럼 설명 + 코드블록 + BOM
+        open(pp, "w", encoding="utf-8-sig").write("네, 계획입니다.\n```json\n" + json.dumps(good, ensure_ascii=False) + "\n```\n끝")
+        assert planner.import_plan(ap, pp, "talk_short") == []
+        p = json.load(open(pp, encoding="utf-8"))
+        assert p["style"] == "talk_short" and p["media"] and not os.path.exists(os.path.join(d, "edit_plan_fix.txt"))
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

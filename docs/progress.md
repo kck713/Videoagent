@@ -51,6 +51,12 @@
 - `scripts/set_api_key.bat`(API키_설정.bat): 키를 PC 환경변수에 저장 후 바로 점검. run.bat은 키 없으면 안내
 - run 끝에 미리보기 이미지 자동 생성·열기, requirements에 pillow 추가
 
+## 2026-10-07 — 무료 모드
+
+- `scripts/run_free.bat`(실행_무료.bat): claude.ai 무료 대화창으로 편집 계획 → 클립보드·메모장 반자동 흐름
+- `agent.py clip`(UTF-16으로 한글 안전 복사), `agent.py import-plan`(코드블록/설명 섞인 답변에서 JSON 추출, 검사, 고칠 문구 생성)
+- 무료 모드 프롬프트는 단어 타임스탬프 생략(4분 원본 기준 약 5천 자)
+
 ## 다음 할 일
 
 - [x] `1007_auto_원본편집` 캡컷 검증

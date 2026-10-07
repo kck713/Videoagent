@@ -344,6 +344,12 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     pc = sub.add_parser("check", help="설치·설정 점검 (API 키 연결 확인 포함)")
     pc.add_argument("--model")
+    pk = sub.add_parser("clip", help="파일 내용을 클립보드로 복사(Windows, 한글 안전)")
+    pk.add_argument("file")
+    pi = sub.add_parser("import-plan", help="무료 모드: claude.ai 답변을 붙여넣은 edit_plan.json 검사·정리")
+    pi.add_argument("--work", default="work")
+    pi.add_argument("--style")
+    pi.add_argument("--target", type=float)
     for c in ("run", "analyze", "plan", "build"):
         p = sub.add_parser(c)
         p.add_argument("--work", default="work")
@@ -370,6 +376,24 @@ def main():
     a = ap.parse_args()
     if a.cmd == "check":
         sys.exit(0 if check(a.model) else 1)
+    if a.cmd == "clip":
+        import subprocess
+        with open(a.file, encoding="utf-8-sig") as f:
+            text = f.read()
+        subprocess.run(["clip"], input=text.encode("utf-16"), check=True)  # BOM 포함 UTF-16 → 한글 안 깨짐
+        print(f"클립보드에 복사했습니다 ({len(text):,}자).")
+        sys.exit(0)
+    if a.cmd == "import-plan":
+        import planner
+        errs = planner.import_plan(os.path.join(a.work, "analysis.json"), os.path.join(a.work, "edit_plan.json"),
+                                   a.style, a.target)
+        if errs:
+            print("[문제] 붙여넣은 계획에 문제가 있습니다:\n - " + "\n - ".join(errs))
+            print("\n같은 claude.ai 대화에 아래 파일 내용을 보내 다시 받은 뒤, 답변을 다시 붙여넣으세요:")
+            print("  " + os.path.join(a.work, "edit_plan_fix.txt"))
+            sys.exit(1)
+        print("계획 확인 완료.")
+        sys.exit(0)
     os.makedirs(a.work, exist_ok=True)
     analysis = os.path.join(a.work, "analysis.json")
     plan_path = getattr(a, "plan", None) or os.path.join(a.work, "edit_plan.json")

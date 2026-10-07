@@ -68,7 +68,7 @@ def system_prompt(style_name=None):
     return SYSTEM + extra
 
 
-def make_user_prompt(analysis, brief="", target_seconds=None):
+def make_user_prompt(analysis, brief="", target_seconds=None, words=True):
     lines = []
     if brief:
         lines.append(f"[편집 요청]\n{brief}")
@@ -79,8 +79,8 @@ def make_user_prompt(analysis, brief="", target_seconds=None):
         if c.get("silences"):
             lines.append("무음: " + ", ".join(f"{a}-{b}" for a, b in c["silences"]))
         for s in c["transcript"]:
-            words = " ".join(f"{w[2]}@{w[0]}" for w in s["words"]) if s.get("words") else ""
-            lines.append(f"  {s['start']:.2f}-{s['end']:.2f}: {s['text']}" + (f"\n    words: {words}" if words else ""))
+            ws = " ".join(f"{w[2]}@{w[0]}" for w in s["words"]) if (words and s.get("words")) else ""
+            lines.append(f"  {s['start']:.2f}-{s['end']:.2f}: {s['text']}" + (f"\n    words: {ws}" if ws else ""))
     if analysis.get("sync"):
         lines.append("\n[멀티캠 동기화] 기준 대비 오프셋(초): " + json.dumps(analysis["sync"], ensure_ascii=False))
     if analysis.get("faces"):
@@ -201,12 +201,7 @@ def plan(analysis_path, out_path, brief="", target_seconds=None, model=None, sty
         raise SystemExit(f"편집 계획을 만들지 못했습니다. 응답 원문: {raw_path}")
     if errs:
         print("  ⚠ 남은 문제(그대로 진행, 캡컷에서 확인 필요):\n   - " + "\n   - ".join(errs))
-    p["media"] = analysis.get("media", {})
-    p.setdefault("faces", analysis.get("faces", {}))
-    if analysis.get("sync"):
-        p["sync"] = analysis["sync"]
-    if style:
-        p["style"] = style
+    finalize(p, analysis, style)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(p, f, ensure_ascii=False, indent=1)
     pin, pout = PRICES.get(model, (0, 0))
@@ -219,10 +214,54 @@ def plan(analysis_path, out_path, brief="", target_seconds=None, model=None, sty
     return out_path
 
 
+def finalize(p, analysis, style=None):
+    """분석 결과(미디어 정보·얼굴·멀티캠)를 플랜에 합침."""
+    p["media"] = analysis.get("media", {})
+    p.setdefault("faces", analysis.get("faces", {}))
+    if analysis.get("sync"):
+        p["sync"] = analysis["sync"]
+    if style:
+        p["style"] = style
+    return p
+
+
+def import_plan(analysis_path, plan_path, style=None, target_seconds=None):
+    """무료 모드: claude.ai 답변을 붙여넣은 파일을 읽어 JSON 추출·검사·정리.
+    반환: 문제 목록(비어 있으면 성공). 문제가 있으면 claude.ai에 다시 보낼 문구를 *_fix.txt로 저장."""
+    with open(analysis_path, encoding="utf-8") as f:
+        analysis = json.load(f)
+    with open(plan_path, encoding="utf-8-sig") as f:
+        text = f.read()
+    if not text.strip():
+        return ["파일이 비어 있습니다. Claude 답변(JSON)을 붙여넣고 저장하세요."]
+    try:
+        p = extract_json(text)
+    except (ValueError, json.JSONDecodeError) as e:
+        errs = [f"JSON 형식 오류: {e}. 답변 전체를 빠짐없이 복사했는지 확인하세요."]
+    else:
+        errs = validate_plan(p, analysis, style, target_seconds)
+    fix = os.path.splitext(plan_path)[0] + "_fix.txt"
+    if errs:
+        with open(fix, "w", encoding="utf-8") as f:
+            f.write("다음 문제를 고쳐서 JSON 전체를 다시 출력하세요(설명 없이 JSON만):\n- " + "\n- ".join(errs))
+        return errs
+    finalize(p, analysis, style)
+    with open(plan_path, "w", encoding="utf-8") as f:
+        json.dump(p, f, ensure_ascii=False, indent=1)
+    if os.path.exists(fix):
+        os.remove(fix)
+    return []
+
+
 def write_prompt_only(analysis_path, out_path, brief="", target_seconds=None, style=None):
-    """API 키 없이 쓰는 경우: 프롬프트를 파일로 저장 → Claude 앱에 붙여넣고 결과 JSON을 edit_plan.json으로 저장."""
+    """API 키 없이 쓰는 경우(무료 모드): 프롬프트를 파일로 저장 → claude.ai에 붙여넣고 답변을 edit_plan.json에 붙여넣기."""
     with open(analysis_path, encoding="utf-8") as f:
         analysis = json.load(f)
     with open(out_path, "w", encoding="utf-8") as f:
-        f.write(system_prompt(style) + "\n\n---\n\n" + make_user_prompt(analysis, brief, target_seconds))
-    print("프롬프트 저장 ->", out_path)
+        # 무료 모드는 붙여넣기 길이를 줄이려고 단어 타임스탬프 생략(컷 경계는 build 때 음성으로 자동 보정)
+        text = (system_prompt(style) + "\n\n---\n\n" + make_user_prompt(analysis, brief, target_seconds, words=False)
+                + "\n\n---\n위 규칙대로 편집 계획 JSON만 출력하세요. 설명은 쓰지 마세요.")
+        f.write(text)
+    print(f"프롬프트 저장 -> {out_path} ({len(text):,}자)")
+    if len(text) > 60000:
+        print("  ⚠ 프롬프트가 깁니다. claude.ai 무료 플랜에서 잘리면 원본을 나눠서(10분 이하씩) 진행하세요.")
