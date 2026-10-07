@@ -22,7 +22,7 @@ capcut_agent/
   preview.py        드래프트 대략 미리보기(스틸 컷 모음) — 캡컷 없이 구도/자막/라벨 확인
   assets.py         스타일 그래픽 PNG 생성(테두리, 강조 원) — 캡컷 도형/스티커 대신 사진 오버레이로 사용
   sync.py           멀티캠 오디오 동기화(카메라 간 오프셋)
-  styles/target.json         목표 스타일(기본): 9:16 꽉 채움 + 얼굴 기준 크롭 + 펀치인, 흰/노랑 자막, 라벨, 엔딩 카드
+  styles/target.json         목표 스타일(기본): 9:16 꽉 채움 + 얼굴 기준 크롭(배율 고정), 흰/노랑 자막, 라벨, 엔딩 카드
   styles/talk_short.json     토크형 빠른 숏폼(샘플 2): 상단 고정 제목, 테두리, 괄호 자막, 이름표, 면책, 빠른 컷(tighten)
   styles/interview_1006.json 1006 가편집 스타일(가로 원본 + 위아래 여백, 한/영 자막)
 examples/edit_plan_example.json   합성 예시 플랜
@@ -37,7 +37,7 @@ scripts/setup.bat, run.bat        Windows 원클릭 설치/실행 (원본/, B롤
    - `main[]`: `{src, in, out, zoom?, lines:[{ko, role, highlight[], label?, en?}]}` — in/out은 **원본 클립 시간**, 순서대로 이어 붙음
      - `role`: normal(흰) / quote(노랑) / emphasis(크게) / alert(빨강) / aside(괄호 해설)
      - `label`: 그 줄 동안 자막 위에 뜨는 검정 박스 맥락 라벨
-     - `zoom`: 생략하면 직전 컷과 다른 배율(1.0↔1.3)로 자동 교차, 얼굴 위치는 컷 구간의 face track으로 계산
+     - `zoom`: 쓰지 않음(사용자 요청으로 펀치인 줌 제거, 배율 1.0 고정). 극단 확대(`focus`)에만 사용. 얼굴 위치는 컷 구간의 face track으로 계산
    - `lines`에는 시간을 적지 않는다. build 시 `subtimer.apply()`가 `subs[]`(start/end 포함)로 변환
    - `broll[]`: `{src, at(타임라인 초), dur, in, fit: fill|fit|pip, pip{scale,x,y}?, caption?, ai?(상단 "AI로 생성한 이미지" 라벨), top_label?}` — 이미지(.png/.jpg)는 photo 세그먼트
    - `labels[]`: `{text, at, dur, kind: context|top}` / `ending`: `{text, dur}` / `broll_ideas[]`: 재연 이미지 아이디어(생성용 프롬프트)
@@ -45,7 +45,7 @@ scripts/setup.bat, run.bat        Windows 원클릭 설치/실행 (원본/, B롤
    - talk_short 등: `title {line1, line2}`(플래너가 제안), `speakers {"A": {name, title}}` + `main[].speaker`, `disclaimer`, `sticker_notes [{at, text}]`
    - 극단 확대: `main[].focus {x,y}`(원본 좌표) + `zoom` 2~2.5, `callouts [{at, dur, x, y}]`(화면 좌표, 노란 원)
    - 멀티캠: analyze `--multicam` → `sync {src: offset}`; 컷별 `main[].angle`에 다른 카메라 src (in/out·자막은 기준 카메라 시간)
-   - 스타일의 `tighten {max_pause, max_cut}`이 있으면 build 때 숨 제거 + 긴 컷 분할을 자동 적용
+   - 스타일의 `tighten {max_pause, max_cut}`이 있으면 build 때 숨 제거(+선택: 긴 컷 분할)를 자동 적용. talk_short는 숨 제거만
 3. `build` → 캡컷 프로젝트 폴더 + `root_meta_info.json` 등록 (등록 전 자동 백업)
 
 ## Claude Code에서 작업하는 법
@@ -57,6 +57,8 @@ scripts/setup.bat, run.bat        Windows 원클릭 설치/실행 (원본/, B롤
 - 플랜을 손으로 고치고 `python capcut_agent/agent.py build --plan <경로> --name <새이름>`으로 재생성할 수 있다(같은 이름은 거부됨 → 새 이름 사용).
 
 ## 반드시 지킬 것
+
+- **펀치인 줌(컷마다 배율 교차)은 쓰지 않는다** (2026-10-07 사용자 요청).
 
 - **캡컷이 실행 중이면 드래프트를 쓰지 않는다.** 사용자에게 종료를 요청한다(종료 시 목록 파일을 덮어씀).
 - 사용자의 기존 캡컷 프로젝트(예: `0915`)는 읽기만 한다. 수정·삭제 금지.

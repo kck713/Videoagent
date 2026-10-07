@@ -98,10 +98,10 @@ def test_target_style_features():
                                           for s in t["segments"])][0]
         e = end_tr["segments"][-1]["target_timerange"]
         assert e["start"] + e["duration"] == d["duration"]
-        # 메인은 9:16 꽉 채움(3.16배 이상), 첫 컷 클로즈업
+        # 메인은 9:16 꽉 채움(3.16배), 펀치인 줌 없음(모든 컷 같은 배율)
         main = next(t for t in d["tracks"] if t["type"] == "video" and t["flag"] == 0)
         sc = [s["clip"]["scale"]["x"] for s in main["segments"]]
-        assert sc[0] > 4.0 and sc[1] > 3.1 and sc[1] < sc[0]
+        assert all(abs(x - 3.1605) < 0.01 for x in sc), sc
         # 이미지 B롤은 photo 타입
         assert any(v["type"] == "photo" for v in vids.values())
 
