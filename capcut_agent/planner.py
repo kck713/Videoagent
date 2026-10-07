@@ -93,24 +93,114 @@ def make_user_prompt(analysis, brief="", target_seconds=None):
 
 
 def extract_json(text):
-    m = re.search(r"\{.*\}", text, re.S)
+    """응답에서 JSON 객체 추출 (```json 코드블록/앞뒤 설명 허용)."""
+    m = re.search(r"```(?:json)?\s*(\{.*\})\s*```", text, re.S) or re.search(r"\{.*\}", text, re.S)
     if not m:
         raise ValueError("Claude 응답에서 JSON을 찾지 못했습니다:\n" + text[:500])
-    return json.loads(m.group(0))
+    return json.loads(m.group(1) if m.lastindex else m.group(0))
 
 
-def plan(analysis_path, out_path, brief="", target_seconds=None, model=None, style=None):
-    import anthropic
+ROLES = {"normal", "quote", "emphasis", "alert", "aside"}
+DEFAULT_MODEL = "claude-opus-5-5"
+# 1M 토큰당 달러 (입력, 출력) — https://platform.claude.com/docs/en/models/overview (2026-10 기준)
+PRICES = {"claude-opus-5-5": (4, 20), "claude-sonnet-5-5": (2, 10), "claude-fable-5-1": (10, 50),
+          "claude-haiku-4-5-20251001": (1, 5)}
+
+
+def validate_plan(p, analysis, style=None, target_seconds=None):
+    """플랜 형식/값 검사. 문제 목록(한국어)을 반환 — 비어 있으면 통과."""
+    errs = []
+    clips = {c["src"]: c for c in analysis.get("clips", [])}
+    others = set(analysis.get("media", {}))
+    main = p.get("main")
+    if not isinstance(main, list) or not main:
+        return ["main이 비어 있습니다."]
+    total = 0.0
+    for i, c in enumerate(main):
+        tag = f"main[{i}]"
+        src = c.get("src")
+        if src not in clips:
+            errs.append(f"{tag}.src '{src}'가 클립 목록에 없습니다. 클립 경로를 그대로 쓰세요: {list(clips)}")
+            continue
+        try:
+            a, b = float(c["in"]), float(c["out"])
+        except (KeyError, TypeError, ValueError):
+            errs.append(f"{tag}: in/out이 숫자가 아닙니다.")
+            continue
+        if not (0 <= a < b <= clips[src]["duration"] + 0.05):
+            errs.append(f"{tag}: in={a}, out={b}가 클립 길이(0~{clips[src]['duration']}) 밖이거나 in>=out입니다.")
+        if b - a < 0.5:
+            errs.append(f"{tag}: 컷이 너무 짧습니다({b - a:.2f}초).")
+        total += max(0.0, b - a)
+        lines = c.get("lines")
+        if not isinstance(lines, list) or not lines:
+            errs.append(f"{tag}.lines가 비어 있습니다.")
+            continue
+        for j, l in enumerate(lines):
+            if not str(l.get("ko", "")).strip():
+                errs.append(f"{tag}.lines[{j}].ko가 비어 있습니다.")
+            if l.get("role", "normal") not in ROLES:
+                errs.append(f"{tag}.lines[{j}].role '{l.get('role')}'는 {sorted(ROLES)} 중 하나여야 합니다.")
+        if c.get("angle") and c["angle"] not in others:
+            errs.append(f"{tag}.angle '{c['angle']}'가 미디어 목록에 없습니다.")
+    for i, br in enumerate(p.get("broll") or []):
+        if br.get("src") not in others:
+            errs.append(f"broll[{i}].src '{br.get('src')}'가 B롤 목록에 없습니다.")
+    if target_seconds and total and not (0.6 * target_seconds <= total <= 1.4 * target_seconds):
+        errs.append(f"전체 길이 {total:.1f}초가 목표 {target_seconds}초와 많이 다릅니다(±40% 이내로).")
+    try:
+        from agent import load_style
+        st = load_style(style or p.get("style"))
+        if st.get("title") and not (p.get("title") or {}).get("line1"):
+            errs.append("이 스타일은 상단 제목이 필요합니다: title {line1, line2}를 넣으세요.")
+    except Exception:
+        pass
+    return errs
+
+
+def _call(client, model, system, messages, max_tokens=32000):
+    """스트리밍으로 호출(긴 응답 시간 초과 방지). (텍스트, usage) 반환."""
+    with client.messages.stream(model=model, max_tokens=max_tokens, system=system, messages=messages) as st:
+        msg = st.get_final_message()
+    text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
+    return text, msg.usage
+
+
+def plan(analysis_path, out_path, brief="", target_seconds=None, model=None, style=None, client=None, retries=1):
+    """Claude API로 편집 계획 생성 → 검증 → 문제 있으면 오류를 알려 주고 다시 생성(최대 retries회)."""
     with open(analysis_path, encoding="utf-8") as f:
         analysis = json.load(f)
-    client = anthropic.Anthropic()
-    model = model or os.environ.get("CAPCUT_AGENT_MODEL", "claude-opus-5-5")
-    print(f"편집 계획 생성 중 ({model})...")
-    msg = client.messages.create(
-        model=model, max_tokens=16000, system=system_prompt(style),
-        messages=[{"role": "user", "content": make_user_prompt(analysis, brief, target_seconds)}])
-    text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
-    p = extract_json(text)
+    if client is None:
+        import anthropic
+        client = anthropic.Anthropic()
+    model = model or os.environ.get("CAPCUT_AGENT_MODEL", DEFAULT_MODEL)
+    system = system_prompt(style)
+    messages = [{"role": "user", "content": make_user_prompt(analysis, brief, target_seconds)}]
+    raw_path = os.path.splitext(out_path)[0] + "_raw.txt"
+    tin = tout = 0
+    p = errs = None
+    for attempt in range(retries + 1):
+        print(f"편집 계획 생성 중 ({model}){' — 재시도' if attempt else ''}...")
+        text, usage = _call(client, model, system, messages)
+        tin += getattr(usage, "input_tokens", 0) or 0
+        tout += getattr(usage, "output_tokens", 0) or 0
+        with open(raw_path, "a", encoding="utf-8") as f:
+            f.write(f"\n===== 시도 {attempt + 1} =====\n{text}\n")
+        try:
+            p = extract_json(text)
+            errs = validate_plan(p, analysis, style, target_seconds)
+        except (ValueError, json.JSONDecodeError) as e:
+            p, errs = None, [f"JSON 형식 오류: {e}"]
+        if not errs:
+            break
+        print("  계획에 문제가 있어 다시 요청합니다:\n   - " + "\n   - ".join(errs[:8]))
+        messages += [{"role": "assistant", "content": text},
+                     {"role": "user", "content": "다음 문제를 고쳐서 JSON 전체를 다시 출력하세요(설명 없이 JSON만):\n- "
+                      + "\n- ".join(errs)}]
+    if p is None:
+        raise SystemExit(f"편집 계획을 만들지 못했습니다. 응답 원문: {raw_path}")
+    if errs:
+        print("  ⚠ 남은 문제(그대로 진행, 캡컷에서 확인 필요):\n   - " + "\n   - ".join(errs))
     p["media"] = analysis.get("media", {})
     p.setdefault("faces", analysis.get("faces", {}))
     if analysis.get("sync"):
@@ -119,7 +209,11 @@ def plan(analysis_path, out_path, brief="", target_seconds=None, model=None, sty
         p["style"] = style
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(p, f, ensure_ascii=False, indent=1)
-    print("편집 계획 ->", out_path)
+    pin, pout = PRICES.get(model, (0, 0))
+    cost = (tin * pin + tout * pout) / 1e6
+    print(f"편집 계획 -> {out_path}\n  토큰: 입력 {tin:,} / 출력 {tout:,}" + (f" (약 ${cost:.2f})" if cost else ""))
+    if p.get("title"):
+        print(f"  제목: {p['title'].get('line1', '')} / {p['title'].get('line2', '')}")
     if p.get("notes"):
         print("  메모:", p["notes"])
     return out_path

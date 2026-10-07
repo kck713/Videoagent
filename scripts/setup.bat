@@ -11,4 +11,5 @@ python -m pip install -r "%~dp0..\capcut_agent\requirements.txt"
 if errorlevel 1 echo [오류] Python이 설치되어 있고 PATH에 등록됐는지 확인하세요.
 echo.
 echo 설치 완료. ffmpeg를 새로 설치했다면 이 창을 닫고 다시 여세요.
+echo Claude API로 자동 편집하려면 API키_설정.bat 을 실행하세요.
 pause

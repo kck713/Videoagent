@@ -44,6 +44,13 @@
 - 사용자 요청으로 펀치인 줌 제거: 두 스타일 zoom_pattern [1.0], talk_short의 긴 컷 분할(max_cut) 끔, 플래너 지침에서 제외. 극단 확대(focus)는 유지
 - `1007_talk_short` 재생성, `1007_target_스타일`은 사용자 수정(자막 크기)을 유지한 채 메인 영상 배율만 1.0으로 패치
 
+## 2026-10-07 — Claude API 모드 정비 (다른 PC용)
+
+- planner: 스트리밍 호출, `validate_plan`(클립 경로·컷 시간·자막·역할·제목·길이) 후 오류를 돌려주고 1회 재시도, 응답 원문 저장, 토큰·비용 표시
+- `agent.py check`: 패키지·ffmpeg·캡컷 폴더/버전·API 키 연결(401/크레딧 안내) 점검
+- `scripts/set_api_key.bat`(API키_설정.bat): 키를 PC 환경변수에 저장 후 바로 점검. run.bat은 키 없으면 안내
+- run 끝에 미리보기 이미지 자동 생성·열기, requirements에 pillow 추가
+
 ## 다음 할 일
 
 - [x] `1007_auto_원본편집` 캡컷 검증

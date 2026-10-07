@@ -282,9 +282,68 @@ def _add_nonoverlap(d, track, text, t0, dur, style):
     d.add_text(track, text, t0, dur, style)
 
 
+def check(model=None):
+    """설치·설정 점검 (다른 PC에서 처음 쓸 때)."""
+    import importlib
+    import shutil
+    ok = True
+
+    def line(good, msg, fix=""):
+        nonlocal ok
+        ok = ok and good
+        print(("  [OK]   " if good else "  [문제] ") + msg + ("" if good or not fix else f"\n         → {fix}"))
+
+    print("환경 점검")
+    line(sys.version_info >= (3, 10), f"Python {sys.version.split()[0]}", "Python 3.10 이상을 설치하세요")
+    for mod, pip in (("faster_whisper", "faster-whisper"), ("anthropic", "anthropic"), ("cv2", "opencv-python-headless<5"),
+                     ("numpy", "numpy"), ("PIL", "pillow")):
+        try:
+            m = importlib.import_module(mod)
+            good = not (mod == "cv2" and not hasattr(m, "CascadeClassifier"))
+            line(good, f"패키지 {mod}", f'pip install "{pip}"')
+        except ImportError:
+            line(False, f"패키지 {mod} 없음", f'설치.bat 실행 또는 pip install "{pip}"')
+    for exe in ("ffmpeg", "ffprobe"):
+        line(bool(shutil.which(exe)), f"{exe}", "설치.bat 실행 후 창을 새로 여세요 (winget install Gyan.FFmpeg)")
+    line(os.path.isdir(DEFAULT_ROOT), f"캡컷 프로젝트 폴더: {DEFAULT_ROOT}", "CapCut 데스크톱을 설치하고 한 번 실행하세요")
+    apps = os.path.join(os.environ.get("LOCALAPPDATA", ""), "CapCut", "Apps")
+    vers = sorted(d for d in os.listdir(apps)) if os.path.isdir(apps) else []
+    with open(os.path.join(HERE, "template_pack.json"), encoding="utf-8") as f:
+        tv = json.load(f).get("app_version")
+    if vers:
+        same = any(v.startswith(tv or "?") for v in vers)
+        line(same, f"캡컷 버전 {vers[-1]} (템플릿 {tv})",
+             "버전이 다릅니다. 이 캡컷에서 프로젝트를 하나 저장한 뒤 make_template.py로 템플릿을 다시 뽑으세요(README 참고)")
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not key:
+        line(False, "Claude API 키 없음 (Claude Code의 /edit 를 쓰면 필요 없음)", "API키_설정.bat 실행")
+    else:
+        model = model or os.environ.get("CAPCUT_AGENT_MODEL", "claude-opus-5-5")
+        try:
+            import anthropic
+            r = anthropic.Anthropic().messages.create(model=model, max_tokens=16,
+                                                      messages=[{"role": "user", "content": "ping"}])
+            line(True, f"Claude API 연결 ({model}, 키 …{key[-4:]})")
+        except Exception as e:  # noqa: BLE001
+            msg = str(e).split("\n")[0][:160]
+            low = msg.lower()
+            fix = "인터넷 연결과 console.anthropic.com의 키·결제 상태를 확인하세요"
+            if "401" in msg or "authentication" in low:
+                msg, fix = "API 키가 올바르지 않습니다", "API키_설정.bat으로 키를 다시 입력하세요 (sk-ant-로 시작)"
+            elif "credit" in low or "billing" in low:
+                msg, fix = "크레딧/결제 문제", "console.anthropic.com → Billing에서 크레딧을 충전하세요"
+            elif "model" in low:
+                fix = "CAPCUT_AGENT_MODEL 환경변수의 모델 이름을 확인하세요"
+            line(False, f"Claude API 연결 실패: {msg}", fix)
+    print("\n모두 정상입니다." if ok else "\n[문제] 항목을 해결한 뒤 다시 점검하세요.")
+    return ok
+
+
 def main():
     ap = argparse.ArgumentParser(description="캡컷 자동 편집 에이전트")
     sub = ap.add_subparsers(dest="cmd", required=True)
+    pc = sub.add_parser("check", help="설치·설정 점검 (API 키 연결 확인 포함)")
+    pc.add_argument("--model")
     for c in ("run", "analyze", "plan", "build"):
         p = sub.add_parser(c)
         p.add_argument("--work", default="work")
@@ -309,6 +368,8 @@ def main():
         if c == "build":
             p.add_argument("--plan", default=None)
     a = ap.parse_args()
+    if a.cmd == "check":
+        sys.exit(0 if check(a.model) else 1)
     os.makedirs(a.work, exist_ok=True)
     analysis = os.path.join(a.work, "analysis.json")
     plan_path = getattr(a, "plan", None) or os.path.join(a.work, "edit_plan.json")
@@ -348,7 +409,15 @@ def main():
                 plan.setdefault("sync", an["sync"])
             for k, v in an.get("media", {}).items():
                 plan.setdefault("media", {}).setdefault(k, v)
-        build_from_plan(plan, a.name, a.drafts_root, load_style(a.style or plan.get("style")), bgm=a.bgm)
+        folder = build_from_plan(plan, a.name, a.drafts_root, load_style(a.style or plan.get("style")), bgm=a.bgm)
+        try:  # 미리보기 (캡컷 없이 구도·자막 확인용)
+            import preview
+            pv = preview.preview(folder, os.path.join(a.work, "preview.jpg"))
+            print(f"미리보기 -> {pv}")
+            if a.cmd == "run" and os.name == "nt":
+                os.startfile(pv)  # noqa: S606
+        except Exception as e:  # noqa: BLE001
+            print(f"(미리보기 생략: {e})")
 
 
 if __name__ == "__main__":

@@ -192,6 +192,61 @@ def test_sync_offset_detection():
     assert abs(off - 1.7) < 0.02, off
 
 
+def test_planner_validates_and_retries():
+    import planner
+
+    class Usage:
+        input_tokens, output_tokens = 1000, 500
+
+    class Block:
+        type = "text"
+
+        def __init__(self, t):
+            self.text = t
+
+    class Msg:
+        def __init__(self, t):
+            self.content, self.usage = [Block(t)], Usage()
+
+    good = {"main": [{"src": "C:/v/A.MP4", "in": 1.0, "out": 4.0, "lines": [{"ko": "안녕하세요", "role": "normal"}]}],
+            "title": {"line1": "제목 1", "line2": "제목 2"}}
+    bad = {"main": [{"src": "C:/v/WRONG.MP4", "in": 5.0, "out": 4.0, "lines": []}]}
+    replies = ["설명 먼저... ```json\n" + json.dumps(bad) + "\n```", json.dumps(good, ensure_ascii=False)]
+    seen = []
+
+    class Stream:
+        def __init__(self, kw):
+            seen.append(kw)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def get_final_message(self):
+            return Msg(replies[len(seen) - 1])
+
+    class Client:
+        class messages:
+            @staticmethod
+            def stream(**kw):
+                return Stream(kw)
+
+    analysis = {"clips": [{"src": "C:/v/A.MP4", "duration": 30.0, "transcript": [], "silences": []}],
+                "media": {"C:/v/A.MP4": {"duration": 30.0, "width": 1920, "height": 1080}}}
+    with tempfile.TemporaryDirectory() as d:
+        ap = os.path.join(d, "analysis.json")
+        json.dump(analysis, open(ap, "w", encoding="utf-8"))
+        out = os.path.join(d, "edit_plan.json")
+        planner.plan(ap, out, style="talk_short", client=Client())
+        p = json.load(open(out, encoding="utf-8"))
+        assert len(seen) == 2                                   # 한 번 재시도
+        assert "WRONG.MP4" in seen[1]["messages"][-1]["content"]  # 오류 내용을 돌려줌
+        assert p["main"][0]["src"] == "C:/v/A.MP4" and p["style"] == "talk_short"
+        assert os.path.exists(os.path.join(d, "edit_plan_raw.txt"))
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

@@ -8,8 +8,13 @@ echo  - 원본 폴더: 인터뷰 원본 영상
 echo  - B롤 폴더: B롤 영상/이미지 (같은 이름 .txt 에 설명)
 echo  - BGM 폴더: 배경음악 1곡 (선택)
 echo  ※ 실행 전에 캡컷을 완전히 종료하세요
-echo  ※ API 키가 없으면 편집 계획은 Claude Code의 /edit 로 하세요
 echo ============================================
+if "%ANTHROPIC_API_KEY%"=="" (
+  echo [안내] Claude API 키가 없습니다. 먼저 API키_설정.bat 을 실행하세요.
+  echo        키 없이 쓰려면 Claude Code에서 /edit 를 사용하세요.
+  pause
+  exit /b 1
+)
 set /p NAME=프로젝트 이름 (예: 1010_인터뷰): 
 if "%NAME%"=="" set NAME=auto_%RANDOM%
 set /p STYLE_NO=스타일 (1=인터뷰 target, 2=토크 숏폼 talk_short) [1]: 

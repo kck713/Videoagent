@@ -15,7 +15,7 @@
 capcut_agent/
   agent.py          CLI (run | analyze | plan | build) + build_from_plan()
   analyze.py        ffprobe + faster-whisper 전사(단어 타임스탬프) + 무음 구간 → work/<이름>/analysis.json
-  planner.py        Claude API로 편집 계획 생성 (SYSTEM 프롬프트 = 편집 원칙). 키 없으면 프롬프트 파일만 출력
+  planner.py        Claude API로 편집 계획 생성 (SYSTEM 프롬프트 = 편집 원칙, 스트리밍 호출, validate_plan 검사 후 1회 재시도, 비용 표시). 키 없으면 프롬프트 파일만 출력
   subtimer.py       컷 경계를 음성 에너지로 보정 + 자막 줄(lines)을 발화 시간/숨 지점에 맞춰 자동 배분
   capcut_draft.py   Draft 클래스: template_pack.json 복제 방식으로 세그먼트/머티리얼 생성, 검증, 저장, 목록 등록
   make_template.py  실제 캡컷 프로젝트에서 template_pack.json 추출 + sanitize
@@ -53,6 +53,8 @@ scripts/setup.bat, run.bat        Windows 원클릭 설치/실행 (원본/, B롤
 - **편집 실행:** `/edit <원본폴더> <프로젝트이름> [요청]` — Claude가 직접 플래너 역할을 한다(API 키 불필요). `.claude/commands/edit.md` 참고
 - **결과 검증:** `/verify-draft <프로젝트이름>` — 캡컷이 연 뒤 다시 저장한 파일과 비교
 - **테스트:** `python tests/test_build.py` (빌더를 고치면 반드시 실행)
+- **환경 점검:** `python capcut_agent/agent.py check` (패키지·ffmpeg·캡컷 폴더/버전·API 키 연결)
+- **API 모드:** `scripts/set_api_key.bat`(키를 PC 환경변수에 저장) → `scripts/run.bat`. 모델은 `CAPCUT_AGENT_MODEL`(기본 claude-opus-5-5)
 - **미리보기:** `python capcut_agent/preview.py <드래프트폴더> --out preview.jpg` → 이미지를 직접 보고 구도·자막 위치를 확인한 뒤 사용자에게 넘긴다
 - 플랜을 손으로 고치고 `python capcut_agent/agent.py build --plan <경로> --name <새이름>`으로 재생성할 수 있다(같은 이름은 거부됨 → 새 이름 사용).
 
