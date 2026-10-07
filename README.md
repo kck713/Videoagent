@@ -1,0 +1,52 @@
+# Videoagent — 캡컷 자동 편집 에이전트
+
+인터뷰 원본 영상을 넣으면 **컷 편집, 한글/영어 자막, 강조 자막, B롤, BGM이 들어간 CapCut 프로젝트**를 만들어 줍니다.
+렌더링 직전 단계까지 자동화하고, 캡컷에서 바로 수정·내보내기할 수 있습니다.
+
+- 대상: Windows + CapCut 9.4.0 (드래프트 = 평문 JSON)
+- 방식: 실제 캡컷 프로젝트에서 뽑은 템플릿을 복제해 드래프트 생성 → 캡컷 프로젝트 목록에 자동 등록
+
+## 빠른 시작 (Windows)
+
+```
+git clone https://github.com/kck713/Videoagent
+cd Videoagent
+scripts\setup.bat            :: ffmpeg + faster-whisper + anthropic 설치
+```
+1. 레포 루트에 `원본\`(인터뷰 원본), `B롤\`(선택, 같은 이름 .txt로 설명), `BGM\`(선택) 폴더를 만들고 파일을 넣습니다.
+2. **캡컷을 종료**한 뒤 `scripts\run.bat` 실행 → 이름/목표 길이/요청 입력
+3. 캡컷을 열면 목록 맨 앞에 새 프로젝트가 있습니다.
+
+Claude API 키(`ANTHROPIC_API_KEY`)가 없으면 편집 계획 단계는 프롬프트 파일만 만듭니다.
+**Claude Code에서는 키 없이** `/edit <원본폴더> <이름> [요청]`으로 Claude가 직접 계획을 짭니다.
+
+## 파이프라인
+
+| 단계 | 파일 | 내용 |
+|---|---|---|
+| 분석 | `analyze.py` | 미디어 정보, Whisper 전사(단어 시간), 무음 구간 |
+| 계획 | `planner.py` / Claude Code | NG·필러 제거, 컷 선택, 자막 줄 나누기, 의역, 강조, B롤 배치 |
+| 타이밍 | `subtimer.py` | 컷 경계를 실제 말 시작/끝에 보정, 자막을 발화·숨 지점에 맞춰 배분 |
+| 생성 | `capcut_draft.py` | 캡컷 프로젝트 폴더 + 목록 등록 (생성 전 검증, 목록 백업) |
+
+명령:
+```
+python capcut_agent/agent.py run     --clips 원본 --broll B롤 --name 1007_인터뷰 --target 60 --brief "..."
+python capcut_agent/agent.py analyze --clips 원본 --work work/1007
+python capcut_agent/agent.py plan    --work work/1007 --brief "..."
+python capcut_agent/agent.py build   --work work/1007 --name 1007_인터뷰 [--bgm BGM\song.mp3]
+python tests/test_build.py
+```
+
+## 문서
+
+- [docs/target-style.md](docs/target-style.md) — 목표 결과물 스타일과 로드맵
+- [docs/capcut-draft-format.md](docs/capcut-draft-format.md) — 캡컷 9.4.0 드래프트 포맷 메모
+- [docs/progress.md](docs/progress.md) — 진행 기록
+- [CLAUDE.md](CLAUDE.md) — Claude Code 작업 지침
+
+## 주의
+
+- 생성 전 캡컷을 반드시 종료하세요(실행 중이면 종료할 때 프로젝트 목록을 덮어씀).
+- 캡컷 업데이트로 포맷이 바뀌면 새 버전에서 저장한 프로젝트로 `make_template.py`를 다시 실행하세요.
+- 노이즈 제거·시선 보정·스마트 색보정은 캡컷에서 원클릭으로 적용하세요(미디어 분석에 묶여 복제 불가).

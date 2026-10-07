@@ -1,0 +1,19 @@
+# 미디어·작업물·개인 데이터 (public 레포)
+work/
+원본/
+B롤/
+BGM/
+samples/
+*.mp4
+*.MP4
+*.mov
+*.MOV
+*.wav
+*.mp3
+*.m4a
+*.jpg
+*.png
+__pycache__/
+*.pyc
+.venv/
+.env
