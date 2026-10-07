@@ -1,0 +1,104 @@
+{
+ "_설명": "1006 가편집본 스타일(v0.1~0.2): 가로 원본 + 위아래 여백, 한/영 자막",
+ "layout": {
+  "mode": "fixed",
+  "scale": 1.942,
+  "x": 0.0,
+  "y": 0.092
+ },
+ "roles": {
+  "normal": {
+   "color": "#FFFFFF",
+   "size": 9,
+   "y": -0.375,
+   "shadow": true,
+   "shadow_alpha": 0.55,
+   "language": "ko-KR"
+  },
+  "quote": {
+   "color": "#FFFFFF",
+   "size": 9,
+   "y": -0.375,
+   "shadow": true,
+   "shadow_alpha": 0.55,
+   "language": "ko-KR"
+  },
+  "emphasis": {
+   "color": "#FF9A1F",
+   "size": 11,
+   "y": -0.375,
+   "bold": true,
+   "shadow": true,
+   "language": "ko-KR"
+  },
+  "alert": {
+   "color": "#FF9A1F",
+   "size": 11,
+   "y": -0.375,
+   "bold": true,
+   "shadow": true,
+   "language": "ko-KR"
+  },
+  "aside": {
+   "color": "#FFFFFF",
+   "size": 9,
+   "y": -0.375,
+   "shadow": true,
+   "shadow_alpha": 0.55,
+   "language": "ko-KR"
+  }
+ },
+ "highlight_color": "#FF9A1F",
+ "en": {
+  "color": "#FFFFFF",
+  "size": 6,
+  "y": -0.455,
+  "bold": true,
+  "bg_color": "#FFFFFF",
+  "bg_alpha": 0.3,
+  "language": "en-US"
+ },
+ "emphasis_en_size": 8,
+ "label": {
+  "color": "#FFFFFF",
+  "size": 5.5,
+  "y": -0.164,
+  "bg_color": "#000000",
+  "bg_alpha": 0.85,
+  "language": "ko-KR"
+ },
+ "top_label": {
+  "color": "#FFFFFF",
+  "size": 4.5,
+  "y": 0.89,
+  "bg_color": "#000000",
+  "bg_alpha": 0.85,
+  "language": "ko-KR"
+ },
+ "ending": {
+  "color": "#FFFFFF",
+  "size": 8,
+  "y": -0.06,
+  "bg_color": "#000000",
+  "bg_alpha": 0.9,
+  "line_max_width": 0.7,
+  "language": "ko-KR"
+ },
+ "pip_caption": {
+  "color": "#FFFFFF",
+  "size": 7,
+  "y": -0.12,
+  "bold": true,
+  "language": "ko-KR",
+  "shadow": true,
+  "shadow_color": "#000000",
+  "shadow_alpha": 0.75,
+  "shadow_smoothing": 0.5,
+  "shadow_distance": 2.5
+ },
+ "ai_image_label": "AI로 생성한 이미지 입니다.",
+ "bgm": {
+  "volume": 0.022,
+  "fade_out": 4.67
+ }
+}

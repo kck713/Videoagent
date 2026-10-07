@@ -25,6 +25,49 @@ def fwd(p):
     return p.replace("\\", "/")
 
 
+IMAGE_EXT = (".jpg", ".jpeg", ".png", ".webp", ".bmp")
+PHOTO_DURATION = 10800.0  # 캡컷은 사진 머티리얼 길이를 3시간으로 둠
+
+
+def is_image(path):
+    return path.lower().endswith(IMAGE_EXT)
+
+
+# ───────────────────────── 화면 배치 ─────────────────────────
+def framing(info, W, H, face=None, zoom=1.0, face_target=(0.5, 0.40), mode="fill"):
+    """원본(info: width/height)을 W×H 캔버스에 배치하는 캡컷 clip 값 계산.
+
+    mode="fill": 캔버스를 꽉 채움(cover) × zoom. face={x,y}(원본 기준 0~1)가 있으면
+    얼굴이 캔버스의 face_target 위치에 오도록 이동하되, 화면 밖 검은 여백이 생기지 않게 제한.
+    반환: (scale, transform_x, transform_y)  — 캡컷 단위(scale 1 = contain, x/y = 반 화면 단위, y 위가 +)
+    """
+    w, h = info.get("width") or W, info.get("height") or H
+    contain = min(W / w, H / h)
+    cover = max(W / w, H / h)
+    k = (cover / contain if mode == "fill" else 1.0) * zoom
+    dw, dh = w * contain * k, h * contain * k          # 표시 크기(px)
+    fx, fy = (face or {}).get("x", 0.5), (face or {}).get("y", 0.5)
+    tx_px = (face_target[0] - 0.5) * W - (fx - 0.5) * dw   # 오른쪽 +
+    ty_px = (face_target[1] - 0.5) * H - (fy - 0.5) * dh   # 아래쪽 +
+    if face is None:
+        tx_px = ty_px = 0.0
+    mx, my = max(0.0, (dw - W) / 2), max(0.0, (dh - H) / 2)
+    tx_px = max(-mx, min(mx, tx_px))
+    ty_px = max(-my, min(my, ty_px))
+    return round(k, 4), round(tx_px / (W / 2), 4), round(-ty_px / (H / 2), 4)
+
+
+def face_for_range(face, a, b, margin=4.0):
+    """얼굴 정보({x,y,h,track:[[t,x,y,h],...]})에서 컷 구간 [a,b] 근처 샘플의 중앙값. 없으면 전체 값."""
+    if not face:
+        return None
+    pts = [p for p in face.get("track", []) if a - margin <= p[0] <= b + margin]
+    if not pts:
+        return face
+    mid = lambda i: sorted(p[i] for p in pts)[len(pts) // 2]
+    return {"x": mid(1), "y": mid(2), "h": mid(3)}
+
+
 # ───────────────────────── 미디어 정보 ─────────────────────────
 def probe(path):
     """ffprobe로 길이/해상도/오디오 유무 확인."""
@@ -45,6 +88,9 @@ def probe(path):
                 rot = int(float(sd["rotation"]))
     if abs(rot) in (90, 270):
         w, h = h, w
+    if is_image(path):
+        return {"duration": PHOTO_DURATION, "width": w, "height": h, "has_audio": False, "has_video": True,
+                "image": True}
     return {"duration": float(j["format"]["duration"]), "width": w, "height": h,
             "has_audio": any(s.get("codec_type") == "audio" for s in j.get("streams", [])),
             "has_video": v is not None}
@@ -136,6 +182,9 @@ class Draft:
     # ── 비디오 (메인/오버레이)
     def add_video(self, track_key, path, src_in, dur, at, *, overlay=False, volume=1.0,
                   fit="fit", info=None, transform=(0.0, 0.0), scale=None):
+        if is_image(path):
+            info = dict(info or {}, duration=PHOTO_DURATION, has_audio=False, image=True)
+            src_in = 0.0
         m = self.register_media(path, info)
         info = m["info"]
         src_in_us, dur_us, at_us = self.t(src_in), self.t(dur), self.t(at)
@@ -150,7 +199,7 @@ class Draft:
                    "duration": max_us, "width": info["width"], "height": info["height"],
                    "has_audio": info.get("has_audio", True),
                    "material_name": os.path.basename(path), "local_material_id": m["meta_id"],
-                   "type": "photo" if not info.get("has_video", True) or path.lower().endswith((".jpg", ".jpeg", ".png", ".webp")) else "video"})
+                   "type": "photo" if (info.get("image") or is_image(path)) else "video"})
         mid = self.mat("videos", vm)
 
         flag = 2 if overlay else 0
@@ -385,7 +434,7 @@ class Draft:
                       "duration": int(info["duration"] * US), "width": info["width"], "height": info["height"],
                       "create_time": int(time.time()), "import_time": int(time.time()), "import_time_ms": now_us,
                       "roughcut_time_range": {"duration": int(info["duration"] * US), "start": 0},
-                      "metetype": "video"})
+                      "metetype": "photo" if info.get("image") else "video"})
             mats.append(x)
         for g in meta.get("draft_materials", []):
             if g.get("type") == 0:

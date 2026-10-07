@@ -11,7 +11,7 @@
 ```
 git clone https://github.com/kck713/Videoagent
 cd Videoagent
-scripts\setup.bat            :: ffmpeg + faster-whisper + anthropic 설치
+scripts\setup.bat            :: ffmpeg + faster-whisper + anthropic + opencv 설치
 ```
 1. 레포 루트에 `원본\`(인터뷰 원본), `B롤\`(선택, 같은 이름 .txt로 설명), `BGM\`(선택) 폴더를 만들고 파일을 넣습니다.
 2. **캡컷을 종료**한 뒤 `scripts\run.bat` 실행 → 이름/목표 길이/요청 입력
@@ -19,6 +19,11 @@ scripts\setup.bat            :: ffmpeg + faster-whisper + anthropic 설치
 
 Claude API 키(`ANTHROPIC_API_KEY`)가 없으면 편집 계획 단계는 프롬프트 파일만 만듭니다.
 **Claude Code에서는 키 없이** `/edit <원본폴더> <이름> [요청]`으로 Claude가 직접 계획을 짭니다.
+
+## 스타일
+
+기본은 `target` 프리셋입니다([docs/target-style.md](docs/target-style.md)). 9:16 꽉 채움, 얼굴 기준 크롭, 클로즈업/미디엄 교차, 흰/노랑 한글 자막, 검정 박스 라벨, 엔딩 카드를 씁니다.
+예전 1006 가편집 스타일(한/영 자막, 위아래 여백)은 `--style interview_1006` 옵션으로 씁니다. 미리보기는 `python capcut_agent/preview.py <드래프트 폴더>`로 만듭니다.
 
 ## 파이프라인
 

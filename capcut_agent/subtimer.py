@@ -143,7 +143,7 @@ def time_lines(cut_in, cut_out, lines, speech, db):
             if b0 < t < a1:
                 t = a1 - 0.05
         bounds.append(max(t, bounds[-1] + 0.3))
-    bounds.append(cut_out)
+    bounds.append(min(cut_out, sp[-1][1] + 0.4))   # 말이 끝나면 자막도 끝 (꼬리 무음 구간 제외)
     return [(round(bounds[i], 2), round(bounds[i + 1], 2)) for i in range(len(lines))]
 
 

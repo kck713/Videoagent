@@ -20,6 +20,8 @@ argument-hint: <원본폴더> <프로젝트이름> [편집 요청]
    - `work/<이름>/analysis.json`의 전사를 읽고, 편집 원칙에 따라 `work/<이름>/edit_plan.json`을 작성한다.
    - 형식: CLAUDE.md의 edit_plan 설명을 따른다. `main[].lines`에는 시간을 적지 않는다.
    - 음성인식 오타는 문맥으로 교정한다. 확신이 없는 단어는 플랜의 `notes`에 적어 사용자에게 알린다.
+   - 기본 스타일은 `target`(docs/target-style.md). 역할(role), 맥락 라벨(label), 엔딩(ending)을 채운다. 영어는 요청 시에만.
+   - B롤이 부족하면 `broll_ideas`에 재연 이미지 아이디어를 적고 사용자에게 알려 준다.
    - 컷을 고른 이유(뺀 부분 포함)를 사용자에게 3~5줄로 요약한다.
 
 4. **컷 검증**
@@ -28,6 +30,8 @@ argument-hint: <원본폴더> <프로젝트이름> [편집 요청]
 5. **생성**
    `python capcut_agent/agent.py build --work "work/<이름>" --name "<이름>"`
    생성 후 `python tests/test_build.py`도 통과하는지 확인한다.
+   `python capcut_agent/preview.py "%LOCALAPPDATA%/CapCut/User Data/Projects/com.lveditor.draft/<이름>" --out "work/<이름>/preview.jpg"`
+   로 미리보기를 만들고 **직접 이미지를 열어** 얼굴이 잘리지 않았는지, 자막·라벨이 겹치지 않는지 확인한다.
 
 6. **보고**
    길이, 컷 수, 자막 수, 뺀 내용, 확인이 필요한 부분을 알리고, 캡컷을 열어 확인해 달라고 요청한다.

@@ -3,30 +3,22 @@
   1080,
   1920
  ],
- "layout": {
-  "scale": 1.942,
-  "x": 0.0,
-  "y": 0.092
- },
+ "style": "target",
  "main": [
   {
    "src": "C:/Videos/interview/A001.MP4",
    "in": 3.2,
    "out": 8.4,
+   "zoom": 1.3,
    "lines": [
     {
      "ko": "처음 이 일을 시작했을 때는",
-     "en": "When I first started this work,",
-     "highlight": [],
-     "emphasis": false
+     "role": "normal",
+     "label": "처음 시작할 때"
     },
     {
      "ko": "정말 막막했어요",
-     "en": "I honestly felt lost.",
-     "highlight": [
-      "막막"
-     ],
-     "emphasis": true
+     "role": "emphasis"
     }
    ]
   },
@@ -37,30 +29,26 @@
    "lines": [
     {
      "ko": "배울 곳을 찾아다니면서",
-     "en": "I kept looking for places to learn",
-     "highlight": [],
-     "emphasis": false
+     "role": "normal",
+     "label": "실제 경험"
     },
     {
      "ko": "하나씩 쌓아 왔거든요",
-     "en": "and built it up one step at a time.",
-     "highlight": [],
-     "emphasis": false
+     "role": "quote",
+     "highlight": [
+      "하나씩"
+     ]
     }
    ]
   },
   {
    "src": "C:/Videos/interview/A001.MP4",
    "in": 40.1,
-   "out": 44.0,
+   "out": 46.0,
    "lines": [
     {
      "ko": "언제든지 편하게 물어보세요",
-     "en": "Feel free to ask me anytime.",
-     "highlight": [
-      "언제든지"
-     ],
-     "emphasis": false
+     "role": "quote"
     }
    ]
   }
@@ -68,13 +56,43 @@
  "broll": [
   {
    "src": "C:/Videos/broll/classroom.mp4",
-   "at": 4.0,
+   "at": 9.0,
    "dur": 3.0,
    "in": 0,
    "fit": "fill"
+  },
+  {
+   "src": "C:/Videos/broll/scene_ai.png",
+   "at": 12.5,
+   "dur": 2.5,
+   "fit": "fill",
+   "ai": true
+  },
+  {
+   "src": "C:/Videos/broll/product.png",
+   "at": 5.6,
+   "dur": 2.0,
+   "fit": "pip",
+   "pip": {
+    "scale": 0.55,
+    "x": 0.0,
+    "y": 0.3
+   },
+   "caption": "정품: 대문자"
   }
  ],
+ "ending": {
+  "text": "혼자 할 수 있을 때까지\n같이 고민하겠습니다.",
+  "dur": 2.5
+ },
  "bgm": null,
+ "faces": {
+  "C:/Videos/interview/A001.MP4": {
+   "x": 0.5,
+   "y": 0.41,
+   "h": 0.27
+  }
+ },
  "media": {
   "C:/Videos/interview/A001.MP4": {
    "duration": 60.0,
@@ -89,6 +107,22 @@
    "height": 1080,
    "has_audio": true,
    "has_video": true
+  },
+  "C:/Videos/broll/scene_ai.png": {
+   "duration": 10800.0,
+   "width": 1024,
+   "height": 1536,
+   "has_audio": false,
+   "has_video": true,
+   "image": true
+  },
+  "C:/Videos/broll/product.png": {
+   "duration": 10800.0,
+   "width": 800,
+   "height": 800,
+   "has_audio": false,
+   "has_video": true,
+   "image": true
   }
  },
  "notes": "합성 예시(실제 인터뷰 아님). lines만 있으면 build 단계에서 subtimer가 자막 시간을 배분합니다."

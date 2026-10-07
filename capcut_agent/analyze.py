@@ -31,6 +31,42 @@ def silences(path, noise_db=-35, min_dur=0.35):
     return [[round(s, 2), round(e, 2)] for s, e in zip(starts, ends)]
 
 
+def detect_face(path, duration, samples=None):
+    """영상 여러 지점에서 얼굴을 찾아 화면 내 중심/크기의 중앙값을 반환 ({x, y, h}, 원본 기준 0~1).
+    OpenCV(4.x)가 없거나 얼굴을 못 찾으면 None → 가운데 기준으로 크롭."""
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        return None
+    if not hasattr(cv2, "CascadeClassifier"):
+        return None
+    cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    samples = samples or int(min(40, max(7, duration / 6)))   # 약 6초 간격, 최대 40장
+    found, track = [], []
+    for k in range(samples):
+        t = duration * (k + 0.5) / samples
+        raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{t:.2f}", "-i", path, "-map", "0:v:0", "-frames:v", "1",
+                              "-vf", "scale=640:-2", "-f", "image2pipe", "-vcodec", "png", "-"],
+                             capture_output=True).stdout
+        if not raw:
+            continue
+        img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            continue
+        H, W = img.shape
+        faces = cascade.detectMultiScale(img, 1.1, 5, minSize=(max(24, W // 20),) * 2)
+        if len(faces):
+            x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
+            found.append(((x + w / 2) / W, (y + h / 2) / H, h / H))
+            track.append([round(t, 2), round((x + w / 2) / W, 3), round((y + h / 2) / H, 3), round(h / H, 3)])
+    if not found:
+        return None
+    a = np.median(np.array(found), axis=0)
+    return {"x": round(float(a[0]), 3), "y": round(float(a[1]), 3), "h": round(float(a[2]), 3), "samples": len(found),
+            "track": track}
+
+
 def transcribe(path, model, language="ko"):
     segs, _ = model.transcribe(path, language=language, word_timestamps=True, vad_filter=True,
                                vad_parameters={"min_silence_duration_ms": 300})
@@ -56,7 +92,11 @@ def analyze(clips_dir, out_dir, broll_dir=None, model_size="large-v3", device="a
         info = probe(c)
         result["media"][c] = info
         print(f"전사 중: {os.path.basename(c)} ({info['duration']:.1f}s)")
-        result["clips"].append({"src": c, "duration": round(info["duration"], 2),
+        face = detect_face(c, info["duration"])
+        if face:
+            result.setdefault("faces", {})[c] = face
+            print(f"  얼굴 위치: x={face['x']} y={face['y']} 크기={face['h']}")
+        result["clips"].append({"src": c, "duration": round(info["duration"], 2), "face": face,
                                 "transcript": transcribe(c, model, language),
                                 "silences": silences(c)})
     for b in list_media(broll_dir, VIDEO_EXT + IMAGE_EXT):
