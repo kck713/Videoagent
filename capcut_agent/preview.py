@@ -106,8 +106,8 @@ def preview(folder, out, frames=8, path_map=None, times=None, frame_override=Non
     W, H = d["canvas_config"]["width"], d["canvas_config"]["height"]
     mats = {m["id"]: (k, m) for k, v in d["materials"].items() if isinstance(v, list)
             for m in v if isinstance(m, dict) and "id" in m}
-    if times is None:
-        times = [d["duration"] * (i + 0.5) / frames / 1e6 for i in range(frames)]
+    if times is None:  # 훅 카드가 보이는 1초 + 나머지는 균등 분할
+        times = [1.0] + [d["duration"] * (i + 0.5) / max(1, frames - 1) / 1e6 for i in range(max(1, frames - 1))]
     tiles = []
     for t in times:
         img = render_at(d, mats, int(t * 1e6), W, H, path_map, frame_override)

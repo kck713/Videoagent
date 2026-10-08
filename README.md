@@ -88,9 +88,17 @@ scripts\setup.bat            :: ffmpeg + faster-whisper + anthropic + opencv 설
 Claude API 키(`ANTHROPIC_API_KEY`)가 없으면 편집 계획 단계는 프롬프트 파일만 만듭니다.
 **Claude Code에서는 키 없이** `/edit <원본폴더> <이름> [요청]`으로 Claude가 직접 계획을 짭니다.
 
+## 훅·메시지·모션 (v0.5)
+
+- **훅:** 플래너가 핵심 메시지 한 문장을 먼저 정하고, 훅 후보 3개(질문/숫자/반전/고백/경고)를 비교해 첫 컷을 고릅니다(뒤쪽 문장을 앞으로 가져오는 콜드 오픈 포함). 첫 2~3초에는 상단 **훅 카드**가 뜹니다.
+- **메시지:** 핵심 문장·숫자가 나오는 순간 화면에 **메시지 카드**(큰 글씨 띠)를 넣고, 강조 자막은 단어 단위로 튀어나오며 등장합니다. 엔딩 카드는 핵심 메시지를 되풀이합니다.
+- **모션:** 강조 자막 팝, 라벨 슬라이드, 카드 페이드, 이미지 B롤 켄 번스를 캡컷 키프레임으로 넣습니다(캡컷에서 그대로 편집 가능). `SFX\` 폴더에 `pop`, `hit`, `whoosh`로 시작하는 효과음 파일을 넣으면 훅·카드·강조에 자동 배치됩니다.
+- **점검:** `python capcut_agent\agent.py critique --work work\<이름>`이 훅 패턴·첫 컷 길이·강조 개수·템포를 검사해 더 강하게 만들 점을 알려 줍니다. API 모드는 이 결과를 붙여 편집장 리뷰 패스를 한 번 더 돌립니다.
+- 키프레임 모션은 캡컷 9.4.0에서 재저장 검증 전입니다. 문제가 있으면 `capcut_agent\styles\<스타일>.json`의 `"motion": {"enabled": false}`로 끄세요.
+
 ## 스타일
 
-기본은 `target` 프리셋입니다([docs/target-style.md](docs/target-style.md)). 9:16 꽉 채움, 얼굴 기준 크롭, 클로즈업/미디엄 교차, 흰/노랑 한글 자막, 검정 박스 라벨, 엔딩 카드를 씁니다.
+기본은 `target` 프리셋입니다([docs/target-style.md](docs/target-style.md)). 9:16 꽉 채움, 얼굴 기준 크롭, 흰/노랑 한글 자막, 검정 박스 라벨, 훅 카드, 메시지 카드, 엔딩 카드, 키프레임 모션을 씁니다.
 토크형 빠른 숏폼은 `--style talk_short`입니다. 상단 고정 제목(자동 제안), 테두리, 괄호 자막, 이름표, 면책 문구, 빠른 컷이 들어갑니다. 여러 카메라로 찍었다면 `analyze --multicam`을 씁니다.
 예전 1006 가편집 스타일(한/영 자막, 위아래 여백)은 `--style interview_1006` 옵션으로 씁니다. 미리보기는 `python capcut_agent/preview.py <드래프트 폴더>`로 만듭니다.
 
@@ -99,16 +107,17 @@ Claude API 키(`ANTHROPIC_API_KEY`)가 없으면 편집 계획 단계는 프롬�
 | 단계 | 파일 | 내용 |
 |---|---|---|
 | 분석 | `analyze.py` | 미디어 정보, Whisper 전사(단어 시간), 무음 구간 |
-| 계획 | `planner.py` / Claude Code | NG·필러 제거, 컷 선택, 자막 줄 나누기, 의역, 강조, B롤 배치 |
+| 계획 | `planner.py` / Claude Code | 핵심 메시지·훅 설계, NG·필러 제거, 컷 선택, 자막 줄 나누기, 강조, 메시지 카드, B롤 배치 (+`critique` 점검, 리뷰 패스) |
 | 타이밍 | `subtimer.py` | 컷 경계를 실제 말 시작/끝에 보정, 자막을 발화·숨 지점에 맞춰 배분 |
-| 생성 | `capcut_draft.py` | 캡컷 프로젝트 폴더 + 목록 등록 (생성 전 검증, 목록 백업) |
+| 생성 | `capcut_draft.py` / `motion.py` | 캡컷 프로젝트 폴더 + 목록 등록 (생성 전 검증, 목록 백업), 키프레임 모션·카드 배경·효과음 |
 
 명령:
 ```
 python capcut_agent/agent.py run     --clips 원본 --broll B롤 --name 1007_인터뷰 --target 60 --brief "..."
 python capcut_agent/agent.py analyze --clips 원본 --work work/1007
 python capcut_agent/agent.py plan    --work work/1007 --brief "..."
-python capcut_agent/agent.py build   --work work/1007 --name 1007_인터뷰 [--bgm BGM\song.mp3]
+python capcut_agent/agent.py critique --work work/1007
+python capcut_agent/agent.py build   --work work/1007 --name 1007_인터뷰 [--bgm BGM\song.mp3] [--sfx SFX]
 python tests/test_build.py
 ```
 

@@ -50,6 +50,20 @@
 - 부가 머티리얼(speeds, canvases, sound_channel_mappings, material_colors, vocal_separations, material_animations, placeholder_infos)은 세그먼트마다 새 ID로 복제합니다.
 - **복제하면 안 되는 것:** loudnesses, vocal_beautifys, smart_relights, effects(스마트 색보정/시선보정), realtime_denoises, beats. 원본 미디어 분석 결과에 묶여 있습니다.
 
+## 키프레임 (모션) — 검증 전
+
+`motion.py`가 세그먼트 `common_keyframes[]`에 아래 형식으로 씁니다(JianYing/CapCut 드래프트에서 널리 확인된 형식, pyJianYingDraft와 동일). 캡컷 9.4.0에서 열어 재저장하는 검증은 아직 전입니다.
+```json
+{"id": "<UUID>", "material_id": "", "property_type": "KFTypeScaleX",
+ "keyframe_list": [{"id": "<UUID>", "curveType": "Line", "graphID": "", "left_control": {"x": 0, "y": 0},
+                    "right_control": {"x": 0, "y": 0}, "time_offset": 0, "values": [1.3]}, ...]}
+```
+- `property_type`: KFTypePositionX / KFTypePositionY / KFTypeScaleX / KFTypeScaleY / KFTypeAlpha / KFTypeRotation
+- `time_offset`: 세그먼트 시작 기준 마이크로초. `values`: 값 하나(배율은 clip.scale과 같은 단위, 위치는 transform 단위)
+- 균등 배율은 ScaleX/ScaleY 둘 다 같은 값으로 씁니다(`uniform_scale.on` 유지).
+- 검증 방법: 캡컷에서 텍스트에 키프레임을 찍고 저장한 프로젝트를 `python capcut_agent/make_template.py --inspect <폴더>`로 열어 필드를 비교. 다르면 motion.py `add_keyframes()`만 고치면 됩니다.
+- 캡컷 내장 텍스트 애니메이션(`material_animations.animations[]`)과 트랜지션·스티커는 `resource_id`/다운로드 경로가 필요해 만들지 않습니다.
+
 ## 템플릿 재추출
 
 캡컷 업데이트 후에는 새 버전에서 프로젝트 하나를 만들어 저장한 뒤 아래 명령을 실행합니다.

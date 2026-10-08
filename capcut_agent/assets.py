@@ -45,3 +45,52 @@ def ring(path, size=400, width=14, color="#FFD43B"):
     ImageDraw.Draw(im).ellipse([width, width, size - width, size - width], outline=_hex(color) + (255,), width=width)
     im.save(path)
     return path
+
+
+def band(path, W=1080, H=1920, y=0.5, height=0.26, alpha=0.78, color="#000000", radius=0.0, inset=0.0, feather=0):
+    """가로로 꽉 찬(또는 inset만큼 안쪽) 반투명 띠. 메시지 카드·훅 카드 배경용.
+    y: 띠 중심의 세로 위치(0 위 ~ 1 아래), height: 화면 높이 대비 비율. feather>0이면 위아래 가장자리를 흐림."""
+    if os.path.exists(path):
+        return path
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    h = int(H * height)
+    top = int(H * y - h / 2)
+    m = int(W * inset)
+    layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(layer).rounded_rectangle([m, top, W - m, top + h], radius=int(W * radius),
+                                            fill=_hex(color) + (int(255 * alpha),))
+    if feather:
+        from PIL import ImageFilter
+        layer = layer.filter(ImageFilter.GaussianBlur(feather))
+    im.alpha_composite(layer)
+    im.save(path)
+    return path
+
+
+def gradient_top(path, W=1080, H=1920, height=0.42, alpha=0.82, color="#000000"):
+    """화면 위쪽에서 아래로 사라지는 어두운 그라데이션(훅 카드 글씨 가독성용)."""
+    if os.path.exists(path):
+        return path
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    h = int(H * height)
+    c = _hex(color)
+    for yy in range(h):
+        t = yy / max(1, h - 1)
+        a = int(255 * alpha * (1 - t) ** 1.6)
+        d.line([(0, yy), (W, yy)], fill=c + (a,))
+    im.save(path)
+    return path
+
+
+def accent_bar(path, w=360, h=14, color="#F2D475", radius=7):
+    """카드 아래 짧은 강조 막대."""
+    if os.path.exists(path):
+        return path
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(im).rounded_rectangle([0, 0, w - 1, h - 1], radius=radius, fill=_hex(color) + (255,))
+    im.save(path)
+    return path

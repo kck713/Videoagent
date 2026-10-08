@@ -200,9 +200,170 @@
   "volume": 0.03,
   "fade_out": 2.0
  },
- "planner_hints": "[talk_short 스타일] 25~45초. 템포가 매우 빠름: 문장 사이 숨(0.25초 이상)은 잘라 붙이고, 덜 중요한 문장은 과감히 뺀다. 반응·리액션(웃음, 감탄)은 짧게 살린다. 상단 고정 제목(title) 2줄을 반드시 제안: line1 = 대상/상황(10~14자, 예: '턱 보톡스 자주 맞는 사람'), line2 = 반전·결과 후킹(6~10자, 예: '최악의 결말...!'). 과장·허위 없이 영상 내용 안에서 뽑는다. 괄호 맥락 자막(label)은 짧게(2~6자, 예: '한 달만에', '그건 인정'). 강조(emphasis)·경고(alert)를 적극적으로(5~8개). 화자가 처음 나오면 speaker를 지정해 이름표를 띄운다. 의료·시술 정보면 disclaimer를 넣는다. 스티커·이모지가 어울리는 지점은 sticker_notes에 적는다(자동 삽입 안 됨). 펀치인 줌(컷마다 배율 바꾸기)은 쓰지 않는다.",
+ "planner_hints": "[talk_short 스타일] 25~45초. 템포가 매우 빠름: 문장 사이 숨(0.25초 이상)은 잘라 붙이고, 덜 중요한 문장은 과감히 뺀다. 반응·리액션(웃음, 감탄)은 짧게 살린다. 상단 고정 제목(title) 2줄을 반드시 제안(line2가 훅이므로 hook 카드는 생략): line1 = 대상/상황(10~14자, 예: '턱 보톡스 자주 맞는 사람'), line2 = 반전·결과 후킹(6~10자, 예: '최악의 결말...!'). 과장·허위 없이 영상 내용 안에서 뽑는다. 괄호 맥락 자막(label)은 짧게(2~6자, 예: '한 달만에', '그건 인정'). 강조(emphasis)·경고(alert)를 적극적으로(5~8개). 화자가 처음 나오면 speaker를 지정해 이름표를 띄운다. 의료·시술 정보면 disclaimer를 넣는다. 스티커·이모지가 어울리는 지점은 sticker_notes에 적는다(자동 삽입 안 됨). 펀치인 줌(컷마다 배율 바꾸기)은 쓰지 않는다. 핵심 문장·숫자가 나오는 순간에 message_cards 1~2개.",
  "tighten": {
   "max_pause": 0.25
  },
- "_크기_보정": "2026-10-07: 캡컷 실측 기준으로 전체 글자 크기 ×0.61 (사용자가 본 자막 9→5.5로 조정)"
+ "_크기_보정": "2026-10-07: 캡컷 실측 기준으로 전체 글자 크기 ×0.61 (사용자가 본 자막 9→5.5로 조정)",
+ "message_card": {
+  "_설명": "핵심 문장·숫자 카드. 제목(상단)과 자막(73%) 사이, 위에서 52~68% 띠",
+  "dur": 2.8,
+  "backdrop": {
+   "kind": "band",
+   "y": 0.6,
+   "height": 0.16,
+   "alpha": 0.78,
+   "inset": 0.06,
+   "radius": 0.03
+  },
+  "text": {
+   "language": "ko-KR",
+   "shadow": true,
+   "shadow_color": "#000000",
+   "shadow_alpha": 0.85,
+   "shadow_smoothing": 0.4,
+   "shadow_distance": 2.5,
+   "color": "#FFFFFF",
+   "size": 6.4,
+   "bold": true,
+   "y": -0.2,
+   "line_max_width": 0.8
+  },
+  "highlight_color": "#FAD067",
+  "stat_value": {
+   "language": "ko-KR",
+   "shadow": true,
+   "shadow_color": "#000000",
+   "shadow_alpha": 0.85,
+   "shadow_smoothing": 0.4,
+   "shadow_distance": 2.5,
+   "color": "#FAD067",
+   "size": 10.0,
+   "bold": true,
+   "y": -0.16
+  },
+  "stat_caption": {
+   "language": "ko-KR",
+   "shadow": true,
+   "shadow_color": "#000000",
+   "shadow_alpha": 0.85,
+   "shadow_smoothing": 0.4,
+   "shadow_distance": 2.5,
+   "color": "#FFFFFF",
+   "size": 3.7,
+   "y": -0.3
+  }
+ },
+ "motion": {
+  "enabled": true,
+  "roles": {
+   "emphasis": {
+    "pop": {
+     "scale_from": 1.3,
+     "dur": 0.12
+    }
+   },
+   "alert": {
+    "pop": {
+     "scale_from": 1.4,
+     "dur": 0.12
+    }
+   },
+   "quote": {
+    "rise": {
+     "dy": -0.03,
+     "dur": 0.12
+    }
+   }
+  },
+  "reveal_roles": [
+   "alert"
+  ],
+  "reveal_pop": {
+   "scale_from": 1.12,
+   "dur": 0.08
+  },
+  "reveal_tail": 0.3,
+  "label": {
+   "rise": {
+    "dy": -0.03,
+    "dur": 0.14
+   }
+  },
+  "top_label": {
+   "fade": {
+    "in": 0.2,
+    "out": 0.2
+   }
+  },
+  "title": {
+   "fade": {
+    "in": 0.25,
+    "out": 0.0
+   }
+  },
+  "card_text": {
+   "pop": {
+    "scale_from": 1.3,
+    "dur": 0.14
+   }
+  },
+  "card_caption": {
+   "rise": {
+    "dy": -0.03,
+    "dur": 0.16
+   }
+  },
+  "backdrop": {
+   "fade": {
+    "in": 0.15,
+    "out": 0.25
+   }
+  },
+  "name_tag": {
+   "slide": {
+    "dx": -0.12,
+    "dur": 0.25
+   }
+  },
+  "ending": {
+   "fade": {
+    "in": 0.3,
+    "out": 0.0
+   }
+  },
+  "broll_image": {
+   "ken_burns": {
+    "from": 1.0,
+    "to": 1.1
+   }
+  },
+  "pip": {
+   "pop": {
+    "scale_from": 0.85,
+    "dur": 0.16
+   }
+  },
+  "pip_caption": {
+   "rise": {
+    "dy": -0.03,
+    "dur": 0.14
+   }
+  },
+  "callout": {
+   "pop": {
+    "scale_from": 1.6,
+    "dur": 0.2
+   }
+  }
+ },
+ "sfx": {
+  "volume": 0.55,
+  "max_dur": 1.2,
+  "min_gap": 0.6,
+  "max_auto": 10,
+  "card": "hit",
+  "emphasis": "pop",
+  "alert": "hit"
+ }
 }

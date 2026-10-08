@@ -141,7 +141,52 @@ def sanitize(pack):
     return json.loads(s)
 
 
+def inspect(folder, what=("keyframes", "animations", "stickers")):
+    """캡컷이 실제로 저장한 프로젝트에서 키프레임·애니메이션·스티커 샘플을 뽑아 보여줍니다(검증용).
+
+    사용법: python make_template.py --inspect "<캡컷 프로젝트 폴더>"
+    - 캡컷에서 텍스트/사진에 키프레임(위치·배율·불투명도)을 찍고 저장한 프로젝트를 넣으면, 세그먼트의
+      common_keyframes 원문을 출력합니다. motion.py가 쓰는 포맷(property_type, time_offset, values …)과 비교하세요.
+    - 텍스트 애니메이션(material_animations)·스티커가 있으면 resource_id/path도 같이 보여줍니다."""
+    d = load(os.path.join(folder, "draft_content.json"))
+    M = index_materials(d)
+    found = 0
+    for t in d["tracks"]:
+        for s in t["segments"]:
+            kind = M.get(s["material_id"], ("?", {}))[0]
+            if "keyframes" in what and s.get("common_keyframes"):
+                found += 1
+                print(f"\n[키프레임] 트랙 {t['type']}/flag {t.get('flag')} 세그먼트({kind}) "
+                      f"@{s['target_timerange']['start'] / 1e6:.2f}s, uniform_scale={s.get('uniform_scale')}")
+                for kf in s["common_keyframes"]:
+                    print(f"  {kf.get('property_type')}: " + ", ".join(
+                        f"{k.get('time_offset', 0) / 1e6:.2f}s={k.get('values')}" for k in kf.get("keyframe_list", [])))
+                    extra = {k: v for k, v in kf.items() if k not in ("keyframe_list",)}
+                    print("   필드:", json.dumps(extra, ensure_ascii=False)[:300])
+                    if kf.get("keyframe_list"):
+                        print("   키프레임 필드:", json.dumps(kf["keyframe_list"][0], ensure_ascii=False)[:300])
+                if s.get("keyframe_refs"):
+                    print("   keyframe_refs:", s["keyframe_refs"])
+            if "animations" in what:
+                for r in s.get("extra_material_refs", []):
+                    k, m = M.get(r, (None, None))
+                    if k == "material_animations" and m.get("animations"):
+                        found += 1
+                        print(f"\n[애니메이션] {kind} @{s['target_timerange']['start'] / 1e6:.2f}s")
+                        for a in m["animations"]:
+                            print("  ", json.dumps(a, ensure_ascii=False)[:400])
+            if "stickers" in what and kind == "stickers":
+                found += 1
+                print(f"\n[스티커] @{s['target_timerange']['start'] / 1e6:.2f}s", json.dumps(M[s["material_id"]][1], ensure_ascii=False)[:400])
+    if not found:
+        print("키프레임/애니메이션/스티커를 쓴 세그먼트가 없습니다. 캡컷에서 텍스트에 키프레임을 하나 찍고 저장한 뒤 다시 실행하세요.")
+    return found
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 2 and sys.argv[1] == "--inspect":
+        inspect(sys.argv[2])
+        sys.exit(0)
     folder = sys.argv[1]
     out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "template_pack.json")
     main(folder, out)

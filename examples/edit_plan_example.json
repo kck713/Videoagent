@@ -4,6 +4,11 @@
   1920
  ],
  "style": "target",
+ "key_message": "혼자 할 수 있을 때까지 같이 고민합니다",
+ "hook": {
+  "text": "처음엔 정말 막막했어요",
+  "sub": "현장 인터뷰"
+ },
  "main": [
   {
    "src": "C:/Videos/interview/A001.MP4",
@@ -50,6 +55,23 @@
      "role": "quote"
     }
    ]
+  }
+ ],
+ "message_cards": [
+  {
+   "at": 6.0,
+   "dur": 3.0,
+   "text": "하나씩 쌓아 올린 경험",
+   "highlight": [
+    "하나씩"
+   ]
+  },
+  {
+   "at": 12.0,
+   "dur": 2.5,
+   "kind": "stat",
+   "value": "3년",
+   "caption": "배우러 다닌 시간"
   }
  ],
  "broll": [
@@ -124,5 +146,5 @@
    "image": true
   }
  },
- "notes": "합성 예시(실제 인터뷰 아님). lines만 있으면 build 단계에서 subtimer가 자막 시간을 배분합니다."
+ "notes": "합성 예시(실제 인터뷰 아님). lines만 있으면 build 단계에서 subtimer가 자막 시간을 배분합니다. hook/message_cards/key_message는 v0.5 훅·메시지 장치."
 }

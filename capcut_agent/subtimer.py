@@ -186,9 +186,10 @@ def _align(targets, cands, lo, hi, window=1.2, bonus=1.6, min_gap=0.3):
     return res[::-1]
 
 
-def apply(plan, transcripts, audio_of=None):
+def apply(plan, transcripts, audio_of=None, words=None):
     """plan['main'][i]['lines'] → plan['main'][i]['subs'] (시간 포함) 변환.
-    transcripts: {src: [(start,end), ...]} 발화 구간."""
+    transcripts: {src: [(start,end), ...]} 발화 구간.
+    words: {src: [(start, end, text), ...]} 단어 타임스탬프(있으면 각 자막 줄에 words로 붙임 — 단어 단위 등장용)."""
     for clip in plan["main"]:
         if "lines" not in clip or clip.get("subs"):
             continue
@@ -204,6 +205,11 @@ def apply(plan, transcripts, audio_of=None):
         times = time_lines(float(clip["in"]), float(clip["out"]), [l["ko"] for l in lines],
                            transcripts.get(src, []), db)
         clip["subs"] = [dict(l, start=a, end=b) for l, (a, b) in zip(lines, times)]
+        ws = (words or {}).get(src) or []
+        if ws:
+            for s in clip["subs"]:
+                s["words"] = [[round(w[0], 3), round(w[1], 3), w[2]] for w in ws
+                              if s["start"] - 0.05 <= float(w[0]) < s["end"]]
     return plan
 
 
