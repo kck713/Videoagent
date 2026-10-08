@@ -411,6 +411,15 @@ def test_critique_flags_weak_plan_and_passes_strong_one():
     assert "강도 문제 없음" in planner.format_critique(r2)
 
 
+def test_claude_commands_in_sync():
+    """claude_code.bat/setup.bat이 claude_commands → .claude/commands 로 복사하므로 두 폴더가 같아야 한다."""
+    a, b = os.path.join(ROOT, "claude_commands"), os.path.join(ROOT, ".claude", "commands")
+    assert sorted(os.listdir(a)) == sorted(os.listdir(b))
+    for n in os.listdir(a):
+        with open(os.path.join(a, n), encoding="utf-8") as f1, open(os.path.join(b, n), encoding="utf-8") as f2:
+            assert f1.read() == f2.read(), n
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

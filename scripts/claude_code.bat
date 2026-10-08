@@ -1,6 +1,15 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0.."
+if exist "claude_commands\edit.md" (
+  if not exist ".claude\commands" mkdir ".claude\commands"
+  xcopy /Y /Q "claude_commands\*.md" ".claude\commands\" >nul
+)
+if not exist ".claude\commands\edit.md" (
+  echo [오류] .claude\commands\edit.md 가 없습니다. 레포 폴더가 아니거나 폴더가 불완전합니다: %CD%
+  pause
+  exit /b 1
+)
 set "CLAUDE=claude"
 where claude >nul 2>nul && goto launch
 if exist "%USERPROFILE%\.local\bin\claude.exe" set "CLAUDE=%USERPROFILE%\.local\bin\claude.exe"
@@ -17,6 +26,7 @@ if not exist "%USERPROFILE%\.local\bin\claude.exe" goto fail
 :launch
 echo ============================================
 echo  Claude Code - 캡컷 자동 편집 에이전트
+echo  폴더: %CD%
 echo  처음이면 브라우저가 열립니다. Claude Pro 계정으로 로그인하세요.
 echo.
 echo  사용 예:
